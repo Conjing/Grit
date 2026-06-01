@@ -17,6 +17,8 @@
 package com.shub39.grit.core.data
 
 import androidx.room3.TypeConverter
+import com.shub39.grit.core.habits.domain.HabitIntervalUnit
+import com.shub39.grit.core.habits.domain.HabitRepeatMode
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlinx.datetime.DayOfWeek
@@ -38,6 +40,26 @@ object Converters {
     fun dayOfWeekFromString(value: String): Set<DayOfWeek> {
         return if (value.isBlank()) emptySet()
         else value.split(",").map { DayOfWeek.valueOf(it) }.toSet()
+    }
+
+    @TypeConverter
+    fun repeatModeToString(value: HabitRepeatMode): String {
+        return value.name
+    }
+
+    @TypeConverter
+    fun repeatModeFromString(value: String): HabitRepeatMode {
+        return HabitRepeatMode.valueOf(value)
+    }
+
+    @TypeConverter
+    fun intervalUnitToString(value: HabitIntervalUnit): String {
+        return value.name
+    }
+
+    @TypeConverter
+    fun intervalUnitFromString(value: String): HabitIntervalUnit {
+        return HabitIntervalUnit.valueOf(value)
     }
 
     @OptIn(ExperimentalTime::class)

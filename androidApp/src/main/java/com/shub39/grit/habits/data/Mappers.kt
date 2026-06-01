@@ -30,6 +30,9 @@ fun HabitEntity.toHabit(): Habit {
         days = days,
         index = index,
         reminder = reminder,
+        repeatMode = repeatMode,
+        intervalUnit = intervalUnit,
+        intervalValue = intervalValue,
     )
 }
 
@@ -46,6 +49,9 @@ fun Habit.toHabitEntity(): HabitEntity {
         index = index,
         days = days,
         reminder = reminder,
+        repeatMode = repeatMode,
+        intervalUnit = intervalUnit,
+        intervalValue = intervalValue,
     )
 }
 

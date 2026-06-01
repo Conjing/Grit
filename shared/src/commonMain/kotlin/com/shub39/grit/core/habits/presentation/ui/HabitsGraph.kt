@@ -52,6 +52,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
 import com.shub39.grit.core.LocalWindowSizeClass
+import com.shub39.grit.core.habits.domain.isDueOn
 import com.shub39.grit.core.habits.presentation.HabitState
 import com.shub39.grit.core.habits.presentation.HabitsAction
 import com.shub39.grit.core.habits.presentation.ui.component.HabitListFABs
@@ -62,10 +63,12 @@ import com.shub39.grit.core.habits.presentation.ui.sections.HabitsList
 import com.shub39.grit.core.habits.presentation.ui.sections.OverallAnalytics
 import com.shub39.grit.core.navigation.horizontalTransitionMetadata
 import com.shub39.grit.core.navigation.verticalTransitionMetadata
+import com.shub39.grit.core.now
 import com.shub39.grit.core.shared_ui.PageFill
 import com.shub39.grit.core.theme.flexFontEmphasis
 import com.shub39.grit.core.theme.flexFontRounded
 import grit.shared.generated.resources.*
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -377,6 +380,13 @@ private fun HabitsTopAppBar(
     modifier: Modifier = Modifier,
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
+    val today = LocalDate.now()
+    val dueTodayHabits = state.habitsWithAnalytics.filter { it.habit.isDueOn(today) }
+    val completedDueTodayCount =
+        dueTodayHabits.count { habitWithAnalytics ->
+            state.completedHabitIds.contains(habitWithAnalytics.habit.id)
+        }
+
     LargeFlexibleTopAppBar(
         modifier = modifier,
         scrollBehavior = scrollBehavior,
@@ -389,7 +399,7 @@ private fun HabitsTopAppBar(
             Column {
                 Text(
                     text =
-                        "${state.completedHabitIds.size}/${state.habitsWithAnalytics.size} " +
+                        "$completedDueTodayCount/${dueTodayHabits.size} " +
                             stringResource(Res.string.completed),
                     fontFamily = flexFontRounded(),
                 )

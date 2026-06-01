@@ -16,15 +16,16 @@
  */
 package com.shub39.grit.habits.data.repository
 
+import com.shub39.grit.core.habits.domain.Habit
 import com.shub39.grit.core.habits.domain.HabitStatus
 import com.shub39.grit.core.habits.domain.WeekDayFrequencyData
 import com.shub39.grit.core.habits.domain.WeeklyComparisonData
+import com.shub39.grit.core.habits.domain.dueDatesBetween
+import com.shub39.grit.core.habits.domain.isDueOn
 import com.shub39.grit.core.now
-import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.daysUntil
 import kotlinx.datetime.format.DayOfWeekNames
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
@@ -32,68 +33,45 @@ import kotlinx.datetime.plus
 
 fun countCurrentStreak(
     dates: List<LocalDate>,
-    eligibleWeekdays: Set<DayOfWeek> = DayOfWeek.entries.toSet(),
+    habit: Habit,
 ): Int {
     if (dates.isEmpty()) return 0
 
     val today = LocalDate.now()
-    val filteredDates = dates.filter { eligibleWeekdays.contains(it.dayOfWeek) }.sorted()
+    val completedDates = dates.filter { habit.isDueOn(it) }.toSet()
+    val firstDate = dates.minOrNull() ?: return 0
+    val dueDates = habit.dueDatesBetween(startInclusive = firstDate, endInclusive = today)
+    if (dueDates.isEmpty() || dueDates.last() !in completedDates) return 0
 
-    if (filteredDates.isEmpty()) return 0
-
-    val lastDate = filteredDates.last()
-
-    // Check if we need to account for eligible days between lastDate and today
-    val daysBetween = lastDate.daysUntil(today)
-    if (daysBetween > 0) {
-        // Check if there are any eligible days we missed between lastDate and today
-        var hasEligibleDayMissed = false
-        for (i in 1..daysBetween) {
-            val checkDate = lastDate.plus(DatePeriod(days = i))
-            if (eligibleWeekdays.contains(checkDate.dayOfWeek) && checkDate < today) {
-                hasEligibleDayMissed = true
-                break
-            }
-        }
-        if (hasEligibleDayMissed) return 0
+    var streak = 0
+    for (dueDate in dueDates.asReversed()) {
+        if (dueDate in completedDates) streak++ else break
     }
 
-    var streak = 1
-    for (i in filteredDates.size - 2 downTo 0) {
-        val currentDate = filteredDates[i]
-        val nextDate = filteredDates[i + 1]
-
-        // Check if these are consecutive eligible days
-        if (areConsecutiveEligibleDays(currentDate, nextDate, eligibleWeekdays)) {
-            streak++
-        } else {
-            break
-        }
-    }
     return streak
 }
 
 fun countBestStreak(
     dates: List<LocalDate>,
-    eligibleWeekdays: Set<DayOfWeek> = DayOfWeek.entries.toSet(),
+    habit: Habit,
 ): Int {
     if (dates.isEmpty()) return 0
 
-    val filteredDates = dates.filter { eligibleWeekdays.contains(it.dayOfWeek) }.sorted()
-    if (filteredDates.isEmpty()) return 0
+    val completedDates = dates.filter { habit.isDueOn(it) }.toSet()
+    val firstDate = dates.minOrNull() ?: return 0
+    val lastDate = dates.maxOrNull() ?: return 0
+    val dueDates = habit.dueDatesBetween(startInclusive = firstDate, endInclusive = lastDate)
+    if (dueDates.isEmpty()) return 0
 
-    var maxConsecutive = 1
-    var currentConsecutive = 1
+    var maxConsecutive = 0
+    var currentConsecutive = 0
 
-    for (i in 1 until filteredDates.size) {
-        val previousDate = filteredDates[i - 1]
-        val currentDate = filteredDates[i]
-
-        if (areConsecutiveEligibleDays(previousDate, currentDate, eligibleWeekdays)) {
+    dueDates.forEach { dueDate ->
+        if (dueDate in completedDates) {
             currentConsecutive++
         } else {
             maxConsecutive = maxOf(maxConsecutive, currentConsecutive)
-            currentConsecutive = 1
+            currentConsecutive = 0
         }
     }
 
@@ -153,35 +131,15 @@ fun prepareHeatMapData(habitData: List<HabitStatus>): Map<LocalDate, Int> {
     return dateFrequency
 }
 
-private fun areConsecutiveEligibleDays(
-    date1: LocalDate,
-    date2: LocalDate,
-    eligibleWeekdays: Set<DayOfWeek>,
-): Boolean {
-    var checkDate = date1.plus(1, DateTimeUnit.DAY)
-    while (checkDate < date2) {
-        if (eligibleWeekdays.contains(checkDate.dayOfWeek)) {
-            // Found an eligible day between date1 and date2, so they're not consecutive
-            return false
-        }
-        checkDate = checkDate.plus(1, DateTimeUnit.DAY)
-    }
-    return checkDate == date2
-}
-
-fun calculateConsistency(dates: List<LocalDate>, eligibleWeekdays: Set<DayOfWeek>): Float {
-    val eligibleDates = dates.filter { it.dayOfWeek in eligibleWeekdays }
-    val firstCompletionDate = eligibleDates.minOrNull() ?: return 0f
+fun calculateConsistency(
+    dates: List<LocalDate>,
+    habit: Habit,
+): Float {
+    val completedDueDates = dates.filter { habit.isDueOn(it) }.distinct().sorted()
+    val firstCompletionDate = completedDueDates.firstOrNull() ?: return 0f
     val today = LocalDate.now()
+    val totalEligibleDays =
+        habit.dueDatesBetween(startInclusive = firstCompletionDate, endInclusive = today).size
 
-    var totalEligibleDays = 0
-    var current = firstCompletionDate
-    while (current <= today) {
-        if (current.dayOfWeek in eligibleWeekdays) {
-            totalEligibleDays++
-        }
-        current = current.plus(1, DateTimeUnit.DAY)
-    }
-
-    return if (totalEligibleDays > 0) eligibleDates.size.toFloat() / totalEligibleDays else 0f
+    return if (totalEligibleDays > 0) completedDueDates.size.toFloat() / totalEligibleDays else 0f
 }

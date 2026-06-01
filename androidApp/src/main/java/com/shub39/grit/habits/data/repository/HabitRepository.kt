@@ -23,6 +23,7 @@ import com.shub39.grit.core.habits.domain.HabitRepo
 import com.shub39.grit.core.habits.domain.HabitStatus
 import com.shub39.grit.core.habits.domain.HabitWithAnalytics
 import com.shub39.grit.core.habits.domain.OverallAnalytics
+import com.shub39.grit.core.habits.domain.isDueOn
 import com.shub39.grit.core.now
 import com.shub39.grit.domain.SettingsDatastore
 import com.shub39.grit.habits.data.database.HabitStatusDao
@@ -108,9 +109,8 @@ class HabitRepository(
                     HabitWithAnalytics(
                         habit = habit,
                         statuses = habitStatusesForHabit,
-                        currentStreak =
-                            countCurrentStreak(dates = dates, eligibleWeekdays = habit.days),
-                        bestStreak = countBestStreak(dates = dates, eligibleWeekdays = habit.days),
+                        currentStreak = countCurrentStreak(dates = dates, habit = habit),
+                        bestStreak = countBestStreak(dates = dates, habit = habit),
                         weeklyComparisonData =
                             prepareLineChartData(
                                 firstDay = firstDayOfWeek.value,
@@ -118,7 +118,7 @@ class HabitRepository(
                             ),
                         weekDayFrequencyData = prepareWeekDayFrequencyData(dates = dates),
                         startedDaysAgo = habit.time.date.daysUntil(LocalDate.now()).toLong(),
-                        consistency = calculateConsistency(dates, habit.days),
+                        consistency = calculateConsistency(dates, habit),
                     )
                 }
             }
@@ -140,7 +140,7 @@ class HabitRepository(
                     habitsFlow.map { habit ->
                         val dates =
                             habitStatusesFlow.filter { it.habitId == habit.id }.map { it.date }
-                        habit.title to calculateConsistency(dates, habit.days)
+                        habit.title to calculateConsistency(dates, habit)
                     }
 
                 val consistencies = habitConsistencies.map { it.second }
@@ -170,7 +170,7 @@ class HabitRepository(
             habitsFlow.map { habit ->
                 val dates = statusFlow.filter { it.habitId == habit.id }.map { it.date }
 
-                habit to dates.any { it == LocalDate.now() }
+                habit to (habit.isDueOn(LocalDate.now()) && dates.any { it == LocalDate.now() })
             }
         }
     }

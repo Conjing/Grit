@@ -46,10 +46,12 @@ import com.kizitonwose.calendar.compose.heatmapcalendar.rememberHeatMapCalendarS
 import com.kizitonwose.calendar.core.minusDays
 import com.kizitonwose.calendar.core.now
 import com.kizitonwose.calendar.core.plusDays
+import com.shub39.grit.core.habits.domain.Habit
 import com.shub39.grit.core.GritPreviewWrapper
 import com.shub39.grit.core.habits.domain.HabitStatus
 import com.shub39.grit.core.habits.domain.StreakPosition
 import com.shub39.grit.core.habits.domain.heatMapStreakShape
+import com.shub39.grit.core.habits.domain.isDueOn
 import com.shub39.grit.core.habits.presentation.daysStartingFrom
 import com.shub39.grit.core.habits.presentation.ui.component.AnalyticsCard
 import com.shub39.grit.core.habits.presentation.ui.component.CardArrows
@@ -61,6 +63,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.YearMonth
 import kotlinx.datetime.format
 import kotlinx.datetime.format.MonthNames
@@ -72,14 +75,14 @@ import org.jetbrains.compose.resources.stringResource
  * Weekly Boolean heatmap of completed days, highlighting streaks
  *
  * @param heatMapState created HeatMapState
- * @param days set of eligible [DayOfWeek]
+ * @param habit habit recurrence configuration
  * @param statuses list of [HabitStatus]
  * @param onDateClick callback when a day is clicked
  */
 @Composable
 fun WeeklyBooleanHeatMap(
     heatMapState: HeatMapCalendarState,
-    days: Set<DayOfWeek>,
+    habit: Habit,
     statuses: List<HabitStatus>,
     onDateClick: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
@@ -166,7 +169,7 @@ fun WeeklyBooleanHeatMap(
                         if (day.date > today) return@HeatMapCalendar
 
                         val done = day.date in doneDates
-                        val validDay = day.date.dayOfWeek in days
+                        val validDay = habit.isDueOn(day.date)
 
                         val donePrevious = day.date.minusDays(1) in doneDates
                         val doneAfter = day.date.plusDays(1) in doneDates
@@ -261,7 +264,15 @@ private fun Preview() {
             (0..40).map {
                 HabitStatus(habitId = 1, date = LocalDate.now().minus(it, DateTimeUnit.DAY))
             },
-        days = DayOfWeek.entries.toSet(),
+        habit =
+            Habit(
+                title = "Habit",
+                description = "",
+                time = LocalDateTime.now(),
+                days = DayOfWeek.entries.toSet(),
+                index = 0,
+                reminder = false,
+            ),
         onDateClick = {},
     )
 }

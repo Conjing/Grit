@@ -23,6 +23,7 @@ import android.util.Log
 import com.shub39.grit.core.data.notification.GritNotificationManager
 import com.shub39.grit.core.habits.domain.HabitRepo
 import com.shub39.grit.core.habits.domain.HabitStatus
+import com.shub39.grit.core.habits.domain.isDueOn
 import com.shub39.grit.core.now
 import com.shub39.grit.core.tasks.domain.TaskRepo
 import com.shub39.grit.domain.AlarmScheduler
@@ -130,6 +131,11 @@ class GritIntentReceiver : BroadcastReceiver(), KoinComponent {
 
         val habit = habitRepo.getHabitById(habitId) ?: return
         if (!habit.reminder) return
+
+        if (!habit.isDueOn(LocalDate.now())) {
+            get<AlarmScheduler>().schedule(habit)
+            return
+        }
 
         // check if habit is completed today, if not then show notification
         val habitStatus = habitRepo.getStatusForHabit(habitId)

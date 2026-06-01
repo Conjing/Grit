@@ -38,6 +38,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -45,8 +47,10 @@ import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
@@ -64,9 +68,13 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.shub39.grit.core.habits.domain.Habit
+import com.shub39.grit.core.habits.domain.HabitIntervalUnit
+import com.shub39.grit.core.habits.domain.HabitRepeatMode
 import com.shub39.grit.core.now
 import com.shub39.grit.core.shared_ui.ExpressiveSwitch
 import com.shub39.grit.core.shared_ui.GritBottomSheet
@@ -85,6 +93,9 @@ import kotlinx.coroutines.delay
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 
@@ -114,6 +125,8 @@ fun HabitUpsertSheetContent(
     val focusRequester = remember { FocusRequester() }
 
     var timePickerDialog by remember { mutableStateOf(false) }
+    var startDatePickerDialog by remember { mutableStateOf(false) }
+    var intervalText by remember { mutableStateOf(newHabit.intervalValue.toString()) }
 
     val titleTextFieldState =
         rememberTextFieldState(
@@ -126,6 +139,17 @@ fun HabitUpsertSheetContent(
             initialText = newHabit.description,
             initialSelection = TextRange(newHabit.description.length),
         )
+
+    val parsedInterval = intervalText.toIntOrNull()
+    val hasValidCustomInterval = parsedInterval != null && parsedInterval > 0
+    val hasValidSchedule =
+        when (newHabit.repeatMode) {
+            HabitRepeatMode.WEEKLY -> newHabit.days.isNotEmpty()
+            HabitRepeatMode.CUSTOM -> hasValidCustomInterval
+        }
+    val showStartDate = newHabit.repeatMode == HabitRepeatMode.CUSTOM
+    val showReminder = hasValidSchedule
+    val showReminderTime = showReminder && newHabit.reminder
 
     LaunchedEffect(Unit) {
         delay(400)
@@ -185,7 +209,7 @@ fun HabitUpsertSheetContent(
                             imeAction = ImeAction.Next,
                         ),
                     label = {
-                        if (newHabit.title.length <= 20) {
+                        if (titleTextFieldState.text.length <= 20) {
                             Text(
                                 text =
                                     stringResource(
@@ -197,7 +221,7 @@ fun HabitUpsertSheetContent(
                             Text(text = stringResource(Res.string.too_long))
                         }
                     },
-                    isError = newHabit.title.length > 20,
+                    isError = titleTextFieldState.text.length > 20,
                     modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
                 )
             }
@@ -214,7 +238,7 @@ fun HabitUpsertSheetContent(
                         ),
                     modifier = Modifier.fillMaxWidth(),
                     label = {
-                        if (newHabit.description.length <= 50) {
+                        if (descTextFieldState.text.length <= 50) {
                             Text(
                                 text =
                                     stringResource(
@@ -226,7 +250,7 @@ fun HabitUpsertSheetContent(
                             Text(text = stringResource(Res.string.too_long))
                         }
                     },
-                    isError = newHabit.description.length > 50,
+                    isError = descTextFieldState.text.length > 50,
                 )
             }
 
@@ -235,8 +259,10 @@ fun HabitUpsertSheetContent(
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Card(
                         shape =
-                            if (newHabit.days.isEmpty()) detachedItemShape()
-                            else leadingItemShape(),
+                            when {
+                                !showStartDate && !showReminder -> detachedItemShape()
+                                else -> leadingItemShape()
+                            },
                         modifier = Modifier.animateContentSize(),
                         colors =
                             CardDefaults.cardColors(
@@ -245,54 +271,202 @@ fun HabitUpsertSheetContent(
                     ) {
                         Column(
                             modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Text(text = stringResource(Res.string.select_days))
+                            Text(text = stringResource(Res.string.repeat))
 
                             Row(
                                 horizontalArrangement =
                                     Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
                             ) {
-                                DayOfWeek.entries.forEach { dayOfWeek ->
+                                HabitRepeatMode.entries.forEach { repeatMode ->
                                     ToggleButton(
-                                        checked = newHabit.days.contains(dayOfWeek),
+                                        checked = newHabit.repeatMode == repeatMode,
                                         onCheckedChange = {
-                                            updateHabit(
-                                                newHabit.copy(
-                                                    days =
-                                                        if (it) {
-                                                            newHabit.days + dayOfWeek
-                                                        } else {
-                                                            newHabit.days - dayOfWeek
-                                                        }
-                                                )
-                                            )
+                                            updateHabit(newHabit.copy(repeatMode = repeatMode))
                                         },
-                                        enabled =
-                                            !(newHabit.days.size == 1 &&
-                                                newHabit.days.contains(dayOfWeek)),
                                         modifier = Modifier.weight(1f),
                                         colors = ToggleButtonDefaults.tonalToggleButtonColors(),
-                                        content = { Text(text = dayOfWeek.name.take(1)) },
+                                        content = {
+                                            Text(
+                                                text =
+                                                    stringResource(
+                                                        when (repeatMode) {
+                                                            HabitRepeatMode.WEEKLY ->
+                                                                Res.string.weekly
+                                                            HabitRepeatMode.CUSTOM ->
+                                                                Res.string.custom
+                                                        }
+                                                    )
+                                            )
+                                        },
                                     )
+                                }
+                            }
+
+                            if (newHabit.repeatMode == HabitRepeatMode.WEEKLY) {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(text = stringResource(Res.string.select_days))
+
+                                    Row(
+                                        horizontalArrangement =
+                                            Arrangement.spacedBy(
+                                                ButtonGroupDefaults.ConnectedSpaceBetween
+                                            )
+                                    ) {
+                                        DayOfWeek.entries.forEach { dayOfWeek ->
+                                            ToggleButton(
+                                                checked = newHabit.days.contains(dayOfWeek),
+                                                onCheckedChange = {
+                                                    updateHabit(
+                                                        newHabit.copy(
+                                                            days =
+                                                                if (it) {
+                                                                    newHabit.days + dayOfWeek
+                                                                } else {
+                                                                    newHabit.days - dayOfWeek
+                                                                }
+                                                        )
+                                                    )
+                                                },
+                                                enabled =
+                                                    !(newHabit.days.size == 1 &&
+                                                        newHabit.days.contains(dayOfWeek)),
+                                                modifier = Modifier.weight(1f),
+                                                colors =
+                                                    ToggleButtonDefaults.tonalToggleButtonColors(),
+                                                content = { Text(text = dayOfWeek.name.take(1)) },
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    OutlinedTextField(
+                                        value = intervalText,
+                                        onValueChange = { intervalText = it.filter(Char::isDigit) },
+                                        singleLine = true,
+                                        shape = MaterialTheme.shapes.medium,
+                                        keyboardOptions =
+                                            KeyboardOptions(
+                                                keyboardType = KeyboardType.Number,
+                                                imeAction = ImeAction.Done,
+                                            ),
+                                        label = { Text(text = stringResource(Res.string.every)) },
+                                        supportingText = {
+                                            if (!hasValidCustomInterval) {
+                                                Text(
+                                                    text =
+                                                        stringResource(
+                                                            Res.string.interval_must_be_positive
+                                                        ),
+                                                    color = MaterialTheme.colorScheme.error,
+                                                )
+                                            }
+                                        },
+                                        isError = !hasValidCustomInterval,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+
+                                    Row(
+                                        horizontalArrangement =
+                                            Arrangement.spacedBy(
+                                                ButtonGroupDefaults.ConnectedSpaceBetween
+                                            )
+                                    ) {
+                                        HabitIntervalUnit.entries.forEach { intervalUnit ->
+                                            ToggleButton(
+                                                checked = newHabit.intervalUnit == intervalUnit,
+                                                onCheckedChange = {
+                                                    updateHabit(
+                                                        newHabit.copy(intervalUnit = intervalUnit)
+                                                    )
+                                                },
+                                                modifier = Modifier.weight(1f),
+                                                colors =
+                                                    ToggleButtonDefaults.tonalToggleButtonColors(),
+                                                content = {
+                                                    Text(
+                                                        text =
+                                                            stringResource(
+                                                                when (intervalUnit) {
+                                                                    HabitIntervalUnit.DAY ->
+                                                                        Res.string.days_unit
+                                                                    HabitIntervalUnit.WEEK ->
+                                                                        Res.string.weeks_unit
+                                                                    HabitIntervalUnit.MONTH ->
+                                                                        Res.string.months_unit
+                                                                    HabitIntervalUnit.YEAR ->
+                                                                        Res.string.years_unit
+                                                                }
+                                                            ),
+                                                        maxLines = 1,
+                                                        softWrap = false,
+                                                        overflow = TextOverflow.Clip,
+                                                    )
+                                                },
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
 
-                    if (newHabit.days.isNotEmpty()) {
+                    if (showStartDate) {
                         ListItem(
                             colors = listItemColors(),
                             modifier =
                                 Modifier.clip(
-                                    if (newHabit.reminder) middleItemShape() else endItemShape()
+                                    if (showReminder) middleItemShape() else endItemShape()
+                                ),
+                            headlineContent = {
+                                Text(
+                                    text = newHabit.time.date.toFormattedString(),
+                                    style =
+                                        MaterialTheme.typography.titleLarge.copy(
+                                            fontFamily = flexFontRounded()
+                                        ),
+                                )
+                            },
+                            supportingContent = { Text(text = stringResource(Res.string.start_date)) },
+                            leadingContent = {
+                                Icon(
+                                    imageVector = vectorResource(Res.drawable.calendar_month),
+                                    contentDescription = "Start Date",
+                                )
+                            },
+                            trailingContent = {
+                                FilledTonalIconButton(onClick = { startDatePickerDialog = true }) {
+                                    Icon(
+                                        imageVector = vectorResource(Res.drawable.edit),
+                                        contentDescription = "Pick Start Date",
+                                    )
+                                }
+                            },
+                        )
+                    }
+
+                    if (showReminder) {
+                        ListItem(
+                            colors = listItemColors(),
+                            modifier =
+                                Modifier.clip(
+                                    if (showReminderTime) middleItemShape() else endItemShape()
                                 ),
                             headlineContent = {
                                 Text(text = stringResource(Res.string.add_reminder))
                             },
                             supportingContent = {
                                 Text(
-                                    text = stringResource(Res.string.add_reminder_desc),
+                                    text =
+                                        stringResource(
+                                            if (showStartDate) {
+                                                Res.string.add_reminder_desc_schedule
+                                            } else {
+                                                Res.string.add_reminder_desc
+                                            }
+                                        ),
                                     maxLines = 1,
                                     modifier = Modifier.basicMarquee(),
                                 )
@@ -321,7 +495,7 @@ fun HabitUpsertSheetContent(
                             },
                         )
 
-                        if (newHabit.reminder) {
+                        if (showReminderTime) {
                             ListItem(
                                 colors = listItemColors(),
                                 modifier = Modifier.clip(endItemShape()),
@@ -356,6 +530,7 @@ fun HabitUpsertSheetContent(
                             newHabit.copy(
                                 title = titleTextFieldState.text.toString(),
                                 description = descTextFieldState.text.toString(),
+                                intervalValue = parsedInterval ?: newHabit.intervalValue,
                             )
                         )
                         onDismissRequest()
@@ -364,7 +539,8 @@ fun HabitUpsertSheetContent(
                     enabled =
                         descTextFieldState.text.length <= 50 &&
                             titleTextFieldState.text.length <= 20 &&
-                            titleTextFieldState.text.isNotBlank(),
+                            titleTextFieldState.text.isNotBlank() &&
+                            hasValidSchedule,
                 ) {
                     Text(
                         text =
@@ -409,6 +585,47 @@ fun HabitUpsertSheetContent(
                 },
             )
         }
+
+        if (startDatePickerDialog) {
+            val datePickerState =
+                rememberDatePickerState(
+                    initialSelectedDateMillis =
+                        newHabit.time.date.toEpochDays() * 24L * 60L * 60L * 1000L
+                )
+
+            DatePickerDialog(
+                onDismissRequest = { startDatePickerDialog = false },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val selectedDate =
+                                datePickerState.selectedDateMillis?.let {
+                                    Instant.fromEpochMilliseconds(it)
+                                        .toLocalDateTime(TimeZone.UTC)
+                                        .date
+                                } ?: return@TextButton
+
+                            updateHabit(
+                                newHabit.copy(
+                                    time = LocalDateTime(date = selectedDate, time = newHabit.time.time)
+                                )
+                            )
+                            startDatePickerDialog = false
+                        },
+                        enabled = datePickerState.selectedDateMillis != null,
+                    ) {
+                        Text(text = stringResource(Res.string.done))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { startDatePickerDialog = false }) {
+                        Text(text = stringResource(Res.string.cancel))
+                    }
+                },
+            ) {
+                DatePicker(state = datePickerState)
+            }
+        }
     }
 }
 
@@ -426,6 +643,9 @@ private fun Preview() {
                     days = DayOfWeek.entries.toSet(),
                     index = 1,
                     reminder = false,
+                    repeatMode = HabitRepeatMode.CUSTOM,
+                    intervalUnit = HabitIntervalUnit.DAY,
+                    intervalValue = 3,
                 ),
             onDismissRequest = {},
             onUpsertHabit = {},

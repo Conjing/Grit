@@ -18,6 +18,8 @@ package com.shub39.grit.core.data.backup
 
 import com.shub39.grit.core.data.Converters
 import com.shub39.grit.core.habits.domain.Habit
+import com.shub39.grit.core.habits.domain.HabitIntervalUnit
+import com.shub39.grit.core.habits.domain.HabitRepeatMode
 import com.shub39.grit.core.habits.domain.HabitStatus
 import com.shub39.grit.core.tasks.domain.Category
 import com.shub39.grit.core.tasks.domain.Task
@@ -37,6 +39,9 @@ fun Habit.toHabitSchema(): HabitSchema {
         time = time.toInstant(TimeZone.currentSystemDefault()).toEpochMilliseconds(),
         days = Converters.dayOfWeekToString(days),
         reminder = reminder,
+        repeatMode = repeatMode.name,
+        intervalUnit = intervalUnit.name,
+        intervalValue = intervalValue,
     )
 }
 
@@ -50,6 +55,9 @@ fun HabitSchema.toHabit(): Habit {
         time = Instant.fromEpochMilliseconds(time).toLocalDateTime(TimeZone.currentSystemDefault()),
         days = Converters.dayOfWeekFromString(days),
         reminder = reminder,
+        repeatMode = HabitRepeatMode.valueOf(repeatMode),
+        intervalUnit = HabitIntervalUnit.valueOf(intervalUnit),
+        intervalValue = intervalValue,
     )
 }
 

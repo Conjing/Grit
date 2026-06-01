@@ -30,6 +30,18 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
+    resolutionStrategy {
+        eachPlugin {
+            when (requested.id.id) {
+                "com.diffplug.spotless" ->
+                    useModule("com.diffplug.spotless:spotless-plugin-gradle:${requested.version}")
+                "io.insert-koin.compiler.plugin" ->
+                    useModule(
+                        "io.insert-koin.compiler.plugin:io.insert-koin.compiler.plugin.gradle.plugin:${requested.version}"
+                    )
+            }
+        }
+    }
 }
 
 dependencyResolutionManagement {

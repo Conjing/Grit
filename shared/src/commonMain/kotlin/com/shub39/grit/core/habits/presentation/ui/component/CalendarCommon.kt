@@ -39,8 +39,10 @@ import com.kizitonwose.calendar.core.CalendarMonth
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.minusDays
 import com.kizitonwose.calendar.core.plusDays
+import com.shub39.grit.core.habits.domain.Habit
 import com.shub39.grit.core.habits.domain.StreakPosition
 import com.shub39.grit.core.habits.domain.calendarMapStreakShape
+import com.shub39.grit.core.habits.domain.isDueOn
 import com.shub39.grit.core.theme.flexFontRounded
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
@@ -81,7 +83,7 @@ fun CalendarDayContent(
     day: CalendarDay,
     doneDates: Set<LocalDate>,
     today: LocalDate,
-    habitDays: Set<DayOfWeek>,
+    habit: Habit,
     edgeWeeks: List<DayOfWeek>,
     onDateClick: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
@@ -91,7 +93,7 @@ fun CalendarDayContent(
     if (day.position != DayPosition.MonthDate) return
 
     val done = day.date in doneDates
-    val validDate = day.date <= today && day.date.dayOfWeek in habitDays
+    val validDate = day.date <= today && habit.isDueOn(day.date)
 
     val donePrevious = day.date.minusDays(1) in doneDates
     val doneAfter = day.date.plusDays(1) in doneDates

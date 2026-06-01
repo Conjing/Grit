@@ -73,6 +73,7 @@
     <string name="foss_desc">All features are unlocked. This variant of the app does not support In-App Purchases. If this app added value to your life, Support me by donating on</string>
     <string name="add_reminder">Add Reminder</string>
     <string name="add_reminder_desc">Receive a notification reminder on selected days</string>
+    <string name="add_reminder_desc_schedule">Receive a notification reminder on your custom schedule</string>
     <string name="invalid_date_time">Time selected is in the past :\u0027)</string>
     <string name="reorder_tasks">Reorder tasks</string>
     <string name="reorder_tasks_desc">Reorder tasks when marked as completed</string>
@@ -86,6 +87,17 @@
     <string name="about">About</string>
     <string name="consistency">Consistency</string>
     <string name="calendar">Calendar</string>
+    <string name="repeat">Repeat</string>
+    <string name="weekly">Weekly</string>
+    <string name="custom">Custom</string>
+    <string name="non_today">Non-Today</string>
+    <string name="every">Every</string>
+    <string name="start_date">Start Date</string>
+    <string name="interval_must_be_positive">Enter a number greater than 0</string>
+    <string name="days_unit">Day</string>
+    <string name="weeks_unit">Week</string>
+    <string name="months_unit">Month</string>
+    <string name="years_unit">Year</string>
     <string name="monthly">Monthly</string>
     <string name="yearly" >Yearly</string>
 </resources>

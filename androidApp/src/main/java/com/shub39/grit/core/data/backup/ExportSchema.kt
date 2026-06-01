@@ -39,6 +39,9 @@ data class HabitSchema(
     val time: Long,
     val days: String,
     val reminder: Boolean,
+    val repeatMode: String = "WEEKLY",
+    val intervalUnit: String = "DAY",
+    val intervalValue: Int = 1,
 )
 
 @Serializable data class HabitStatusSchema(val id: Long = 0, val habitId: Long, val date: Long)

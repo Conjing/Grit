@@ -24,6 +24,7 @@ import android.os.Build
 import android.util.Log
 import com.shub39.grit.core.data.GritIntentReceiver
 import com.shub39.grit.core.habits.domain.Habit
+import com.shub39.grit.core.habits.domain.nextDueDateOnOrAfter
 import com.shub39.grit.core.now
 import com.shub39.grit.core.tasks.domain.Task
 import com.shub39.grit.domain.AlarmScheduler
@@ -31,6 +32,7 @@ import com.shub39.grit.domain.IntentActions
 import kotlin.time.ExperimentalTime
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
@@ -49,16 +51,24 @@ class NotificationAlarmScheduler(private val context: Context) : AlarmScheduler 
 
     override fun schedule(habit: Habit) {
         cancel(habit)
-        if (!habit.reminder || habit.days.isEmpty()) return
-
-        var scheduleTime = habit.time
+        if (!habit.reminder) return
         val now = LocalDateTime.Companion.now()
+        val candidateDate =
+            if (habit.time.time <= now.time) {
+                now.date.plus(1, DateTimeUnit.DAY)
+            } else {
+                now.date
+            }
+        val scheduleDate = habit.nextDueDateOnOrAfter(candidateDate) ?: return
+        val scheduleTime =
+            LocalDateTime(
+                date = scheduleDate,
+                time = LocalTime(hour = habit.time.hour, minute = habit.time.minute),
+            )
 
-        while ((scheduleTime < now) || !habit.days.contains(scheduleTime.dayOfWeek)) {
-            scheduleTime =
-                scheduleTime.date.plus(1, DateTimeUnit.Companion.DAY).let {
-                    LocalDateTime(date = it, time = scheduleTime.time)
-                }
+        if (scheduleTime < now) {
+            Log.d(TAG, "Habit '${habit.title}' reminder time is in the past")
+            return
         }
 
         val notificationIntent =

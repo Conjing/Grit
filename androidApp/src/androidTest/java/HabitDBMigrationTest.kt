@@ -56,9 +56,9 @@ class HabitDBMigrationTest {
 
     @OptIn(ExperimentalTime::class)
     @Test
-    fun migration4to5_containsCorrectData() = runBlocking {
+    fun migration5to6_containsCorrectData() = runBlocking {
         helper
-            .createDatabase(4)
+            .createDatabase(5)
             .apply {
                 (1..5).forEach { habit ->
                     val timeEpoch =
@@ -97,7 +97,7 @@ class HabitDBMigrationTest {
             }
             .close()
 
-        val db = helper.runMigrationsAndValidate(5, listOf())
+        val db = helper.runMigrationsAndValidate(6, listOf(HabitDatabase.migrate_5_6))
 
         // --- Habits assertions ---
         db.prepare("SELECT COUNT(*) FROM habit_index").use { stmt ->
@@ -106,7 +106,7 @@ class HabitDBMigrationTest {
         }
 
         db.prepare(
-                "SELECT id, title, description, [index], days, time, reminder FROM habit_index ORDER BY id"
+                "SELECT id, title, description, [index], days, time, reminder, repeatMode, intervalUnit, intervalValue FROM habit_index ORDER BY id"
             )
             .use { stmt ->
                 var count = 0
@@ -119,6 +119,9 @@ class HabitDBMigrationTest {
                     val days = stmt.getText(4)
                     val time = stmt.getLong(5)
                     val reminder = stmt.getLong(6).toInt()
+                    val repeatMode = stmt.getText(7)
+                    val intervalUnit = stmt.getText(8)
+                    val intervalValue = stmt.getLong(9).toInt()
 
                     // Title & description patterns
                     assertThat(title).isEqualTo("Habit $id")
@@ -135,6 +138,9 @@ class HabitDBMigrationTest {
 
                     // Reminder default
                     assertThat(reminder).isEqualTo(1)
+                    assertThat(repeatMode).isEqualTo("WEEKLY")
+                    assertThat(intervalUnit).isEqualTo("DAY")
+                    assertThat(intervalValue).isEqualTo(1)
                 }
                 assertThat(count).isEqualTo(5)
             }
@@ -167,13 +173,14 @@ class HabitDBMigrationTest {
 
     @Test
     fun testAllMigrations() = runBlocking {
-        helper.createDatabase(4).close()
+        helper.createDatabase(5).close()
 
         Room.databaseBuilder(
                 InstrumentationRegistry.getInstrumentation().targetContext,
                 HabitDatabase::class.java,
                 DB_NAME,
             )
+            .addMigrations(HabitDatabase.migrate_5_6)
             .build()
             .close()
     }

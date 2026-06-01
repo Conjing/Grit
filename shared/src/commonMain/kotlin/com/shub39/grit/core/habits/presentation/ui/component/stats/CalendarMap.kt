@@ -34,6 +34,7 @@ import com.kizitonwose.calendar.compose.rememberCalendarState
 import com.kizitonwose.calendar.core.minusYears
 import com.kizitonwose.calendar.core.now
 import com.shub39.grit.core.GritPreviewWrapper
+import com.shub39.grit.core.habits.domain.Habit
 import com.shub39.grit.core.habits.domain.HabitStatus
 import com.shub39.grit.core.habits.presentation.daysStartingFrom
 import com.shub39.grit.core.habits.presentation.ui.component.AnalyticsCard
@@ -46,6 +47,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.YearMonth
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
@@ -57,14 +59,14 @@ import org.jetbrains.compose.resources.stringResource
  * @param canSeeContent is user subbed?
  * @param calendarState calendar state object
  * @param statuses list of [HabitStatus]
- * @param days set of [DayOfWeek]
+ * @param habit recurrence configuration
  */
 @Composable
 fun CalendarMap(
     canSeeContent: Boolean,
     calendarState: CalendarState,
     statuses: List<HabitStatus>,
-    days: Set<DayOfWeek>,
+    habit: Habit,
     onNavigateToPaywall: () -> Unit,
     onNavigateToCalendar: () -> Unit,
     onDateClick: (LocalDate) -> Unit,
@@ -127,7 +129,7 @@ fun CalendarMap(
                     day = day,
                     doneDates = doneDates,
                     today = today,
-                    habitDays = days,
+                    habit = habit,
                     edgeWeeks = edgeWeeks,
                     onDateClick = onDateClick,
                 )
@@ -152,7 +154,15 @@ private fun Preview() {
             (0..40).map {
                 HabitStatus(habitId = 1, date = LocalDate.now().minus(it, DateTimeUnit.DAY))
             },
-        days = DayOfWeek.entries.toSet(),
+        habit =
+            Habit(
+                title = "Habit",
+                description = "",
+                time = LocalDateTime.now(),
+                days = DayOfWeek.entries.toSet(),
+                index = 0,
+                reminder = false,
+            ),
         onNavigateToPaywall = {},
         onDateClick = {},
         onNavigateToCalendar = {},

@@ -29,4 +29,7 @@ data class Habit(
     val days: Set<DayOfWeek>,
     val index: Int,
     val reminder: Boolean,
+    val repeatMode: HabitRepeatMode = HabitRepeatMode.WEEKLY,
+    val intervalUnit: HabitIntervalUnit = HabitIntervalUnit.DAY,
+    val intervalValue: Int = 1,
 )

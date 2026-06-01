@@ -212,7 +212,7 @@ private fun YearlyCalendar(
                     day = day,
                     doneDates = doneDates,
                     today = today,
-                    habitDays = currentHabit.habit.days,
+                    habit = currentHabit.habit,
                     edgeWeeks = edgeWeeks,
                     onDateClick = { onDateClick(currentHabit.habit, it) },
                     height = 20.dp,
@@ -252,7 +252,7 @@ private fun MonthlyCalendar(
                 day = day,
                 doneDates = doneDates,
                 today = today,
-                habitDays = currentHabit.habit.days,
+                habit = currentHabit.habit,
                 edgeWeeks = edgeWeeks,
                 onDateClick = { onDateClick(currentHabit.habit, it) },
             )
