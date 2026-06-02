@@ -16,6 +16,7 @@
  */
 package com.shub39.grit.domain
 
+import com.shub39.grit.core.settings.domain.ReminderMode
 import com.shub39.grit.core.settings.domain.Sections
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.DayOfWeek
@@ -33,9 +34,21 @@ interface SettingsDatastore {
 
     suspend fun setIs24Hr(pref: Boolean)
 
-    fun getNotificationsFlow(): Flow<Boolean>
+    fun getReminderEnabledFlow(): Flow<Boolean>
 
-    suspend fun setNotifications(pref: Boolean)
+    suspend fun setReminderEnabled(pref: Boolean)
+
+    fun getReminderModeFlow(): Flow<ReminderMode>
+
+    suspend fun setReminderMode(mode: ReminderMode)
+
+    fun getAlarmSoundPathFlow(): Flow<String?>
+
+    suspend fun setAlarmSoundPath(path: String?)
+
+    fun getAlarmSoundLabelFlow(): Flow<String?>
+
+    suspend fun setAlarmSoundLabel(label: String?)
 
     fun getBiometricLockPref(): Flow<Boolean>
 

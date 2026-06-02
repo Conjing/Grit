@@ -14,14 +14,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.shub39.grit.domain
+package com.shub39.grit.core.settings.domain
 
-// all the different intent actions passed
-enum class IntentActions(val action: String) {
-    ADD_HABIT_STATUS("add_habit_status"),
-    HABIT_NOTIFICATION("habit"),
-    TASK_NOTIFICATION("task_notification"),
-    MARK_TASK_DONE("mark_task_done"),
-    REMINDER_SNOOZE("reminder_snooze"),
-    REMINDER_DISMISS("reminder_dismiss"),
+enum class ReminderMode {
+    SILENT,
+    POPUP,
+    ALARM,
 }

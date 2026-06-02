@@ -21,6 +21,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.shub39.grit.core.settings.domain.ReminderMode
 import com.shub39.grit.core.settings.domain.Sections
 import com.shub39.grit.domain.SettingsDatastore
 import kotlinx.coroutines.flow.Flow
@@ -36,6 +37,10 @@ class SettingsDatastoreImpl(private val datastore: DataStore<Preferences>) : Set
         private val startingSectionKey = stringPreferencesKey("starting_page")
         private val is24HrKey = booleanPreferencesKey("is_24Hr")
         private val notificationsKey = booleanPreferencesKey("notifications")
+        private val reminderEnabledKey = booleanPreferencesKey("reminder_enabled")
+        private val reminderModeKey = stringPreferencesKey("reminder_mode")
+        private val alarmSoundPathKey = stringPreferencesKey("alarm_sound_path")
+        private val alarmSoundLabelKey = stringPreferencesKey("alarm_sound_label")
         private val biometricLockKey = booleanPreferencesKey("biometric")
         private val taskReorderKey = booleanPreferencesKey("task_reorder")
         private val compactHabitView = booleanPreferencesKey("compact_habit_view")
@@ -69,11 +74,45 @@ class SettingsDatastoreImpl(private val datastore: DataStore<Preferences>) : Set
         datastore.edit { prefs -> prefs[is24HrKey] = pref }
     }
 
-    override fun getNotificationsFlow(): Flow<Boolean> =
-        datastore.data.map { prefs -> prefs[notificationsKey] == true }
+    override fun getReminderEnabledFlow(): Flow<Boolean> =
+        datastore.data.map { prefs ->
+            prefs[reminderEnabledKey] ?: !(prefs[notificationsKey] == true)
+        }
 
-    override suspend fun setNotifications(pref: Boolean) {
-        datastore.edit { prefs -> prefs[notificationsKey] = pref }
+    override suspend fun setReminderEnabled(pref: Boolean) {
+        datastore.edit { prefs ->
+            prefs[reminderEnabledKey] = pref
+            // Keep the legacy pause flag in sync so upgraded installs preserve behavior.
+            prefs[notificationsKey] = !pref
+        }
+    }
+
+    override fun getReminderModeFlow(): Flow<ReminderMode> =
+        datastore.data.map { prefs ->
+            ReminderMode.valueOf(prefs[reminderModeKey] ?: ReminderMode.SILENT.name)
+        }
+
+    override suspend fun setReminderMode(mode: ReminderMode) {
+        datastore.edit { prefs -> prefs[reminderModeKey] = mode.name }
+    }
+
+    override fun getAlarmSoundPathFlow(): Flow<String?> =
+        datastore.data.map { prefs -> prefs[alarmSoundPathKey] }
+
+    override suspend fun setAlarmSoundPath(path: String?) {
+        datastore.edit { prefs ->
+            if (path == null) prefs.remove(alarmSoundPathKey) else prefs[alarmSoundPathKey] = path
+        }
+    }
+
+    override fun getAlarmSoundLabelFlow(): Flow<String?> =
+        datastore.data.map { prefs -> prefs[alarmSoundLabelKey] }
+
+    override suspend fun setAlarmSoundLabel(label: String?) {
+        datastore.edit { prefs ->
+            if (label == null) prefs.remove(alarmSoundLabelKey)
+            else prefs[alarmSoundLabelKey] = label
+        }
     }
 
     override fun getBiometricLockPref(): Flow<Boolean> =

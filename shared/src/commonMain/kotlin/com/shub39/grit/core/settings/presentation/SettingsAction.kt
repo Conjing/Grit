@@ -17,6 +17,7 @@
 package com.shub39.grit.core.settings.presentation
 
 import androidx.compose.ui.graphics.Color
+import com.shub39.grit.core.settings.domain.ReminderMode
 import com.shub39.grit.core.settings.domain.Sections
 import com.shub39.grit.core.theme.AppTheme
 import com.shub39.grit.core.theme.Fonts
@@ -36,7 +37,14 @@ sealed interface SettingsAction {
 
     data class ChangeStartingPage(val page: Sections) : SettingsAction
 
-    data class ChangePauseNotifications(val pref: Boolean) : SettingsAction
+    data class ChangeReminderEnabled(val pref: Boolean) : SettingsAction
+
+    data class ChangeReminderMode(val mode: ReminderMode) : SettingsAction
+
+    data class ChangeAlarmSound(
+        val path: String? = null,
+        val label: String? = null,
+    ) : SettingsAction
 
     data class ChangeReorderTasks(val pref: Boolean) : SettingsAction
 

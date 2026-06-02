@@ -42,6 +42,7 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.tooling.preview.PreviewWrapper
 import androidx.compose.ui.unit.dp
 import com.shub39.grit.core.GritPreviewWrapper
+import com.shub39.grit.core.settings.domain.ReminderMode
 import com.shub39.grit.core.settings.domain.Sections
 import com.shub39.grit.core.settings.presentation.SettingsAction
 import com.shub39.grit.core.settings.presentation.SettingsState
@@ -113,21 +114,19 @@ fun RootPage(
                 )
             }
 
-            // General settings
+            // Reminder settings
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     ListItem(
-                        headlineContent = {
-                            Text(text = stringResource(Res.string.pause_notifications))
-                        },
+                        headlineContent = { Text(text = stringResource(Res.string.reminder_mode)) },
                         supportingContent = {
-                            Text(text = stringResource(Res.string.pause_notifications_desc))
+                            Text(text = stringResource(Res.string.reminder_mode_desc))
                         },
                         trailingContent = {
                             ExpressiveSwitch(
-                                checked = state.pauseNotifications,
+                                checked = state.reminderEnabled,
                                 onCheckedChange = {
-                                    onAction(SettingsAction.ChangePauseNotifications(it))
+                                    onAction(SettingsAction.ChangeReminderEnabled(it))
                                 },
                             )
                         },
@@ -135,6 +134,87 @@ fun RootPage(
                         modifier = Modifier.clip(leadingItemShape()),
                     )
 
+                    if (state.reminderEnabled) {
+                        ReminderMode.entries.forEachIndexed { index, mode ->
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        text =
+                                            when (mode) {
+                                                ReminderMode.SILENT ->
+                                                    stringResource(Res.string.reminder_mode_silent)
+                                                ReminderMode.POPUP ->
+                                                    stringResource(Res.string.reminder_mode_popup)
+                                                ReminderMode.ALARM ->
+                                                    stringResource(Res.string.reminder_mode_alarm)
+                                            }
+                                    )
+                                },
+                                supportingContent = {
+                                    Text(
+                                        text =
+                                            when (mode) {
+                                                ReminderMode.SILENT ->
+                                                    stringResource(
+                                                        Res.string.reminder_mode_silent_desc
+                                                    )
+                                                ReminderMode.POPUP ->
+                                                    stringResource(
+                                                        Res.string.reminder_mode_popup_desc
+                                                    )
+                                                ReminderMode.ALARM ->
+                                                    stringResource(
+                                                        Res.string.reminder_mode_alarm_desc
+                                                    )
+                                            }
+                                    )
+                                },
+                                trailingContent = {
+                                    if (state.reminderMode == mode) {
+                                        Icon(
+                                            imageVector =
+                                                vectorResource(Res.drawable.check_circle),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                },
+                                colors = listItemColors(),
+                                modifier =
+                                    Modifier.clip(
+                                            if (
+                                                mode == ReminderMode.ALARM &&
+                                                    state.reminderMode != ReminderMode.ALARM
+                                            ) {
+                                                endItemShape()
+                                            } else {
+                                                middleItemShape()
+                                            }
+                                        )
+                                        .clickable {
+                                            onAction(SettingsAction.ChangeReminderMode(mode))
+                                        },
+                            )
+                        }
+
+                        if (state.reminderMode == ReminderMode.ALARM) {
+                            AlarmSoundSettings(
+                                soundName = state.alarmSoundName,
+                                onPick = { path, label ->
+                                    onAction(SettingsAction.ChangeAlarmSound(path, label))
+                                },
+                                onReset = { onAction(SettingsAction.ChangeAlarmSound()) },
+                            )
+                        }
+                    }
+                }
+            }
+
+            reminderSystemSettingsSection()
+
+            // General settings
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     ListItem(
                         headlineContent = { Text(text = stringResource(Res.string.reorder_tasks)) },
                         supportingContent = {
@@ -149,7 +229,7 @@ fun RootPage(
                             )
                         },
                         colors = listItemColors(),
-                        modifier = Modifier.clip(middleItemShape()),
+                        modifier = Modifier.clip(leadingItemShape()),
                     )
 
                     ListItem(
@@ -334,6 +414,15 @@ fun RootPage(
 }
 
 expect fun LazyListScope.languagePicker(onClick: () -> Unit)
+
+expect fun LazyListScope.reminderSystemSettingsSection()
+
+@Composable
+expect fun AlarmSoundSettings(
+    soundName: String?,
+    onPick: (path: String, label: String) -> Unit,
+    onReset: () -> Unit,
+)
 
 @PreviewWrapper(GritPreviewWrapper::class)
 @PreviewLightDark

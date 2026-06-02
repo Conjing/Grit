@@ -188,8 +188,16 @@ object DummyStateProvider {
                 _settingsState.update { it.copy(startingPage = action.page) }
             }
 
-            is SettingsAction.ChangePauseNotifications -> {
-                _settingsState.update { it.copy(pauseNotifications = action.pref) }
+            is SettingsAction.ChangeReminderEnabled -> {
+                _settingsState.update { it.copy(reminderEnabled = action.pref) }
+            }
+
+            is SettingsAction.ChangeReminderMode -> {
+                _settingsState.update { it.copy(reminderMode = action.mode) }
+            }
+
+            is SettingsAction.ChangeAlarmSound -> {
+                _settingsState.update { it.copy(alarmSoundName = action.label) }
             }
 
             is SettingsAction.ChangeReorderTasks -> {

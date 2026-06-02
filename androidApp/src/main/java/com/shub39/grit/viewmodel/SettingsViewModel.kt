@@ -90,6 +90,17 @@ class SettingsViewModel(
                 is SettingsAction.ChangeStartingPage ->
                     settingsDatastore.setStartingPage(action.page)
 
+                is SettingsAction.ChangeReminderEnabled ->
+                    settingsDatastore.setReminderEnabled(action.pref)
+
+                is SettingsAction.ChangeReminderMode ->
+                    settingsDatastore.setReminderMode(action.mode)
+
+                is SettingsAction.ChangeAlarmSound -> {
+                    settingsDatastore.setAlarmSoundPath(action.path)
+                    settingsDatastore.setAlarmSoundLabel(action.label)
+                }
+
                 SettingsAction.OnResetBackupState -> {
                     _state.update { it.copy(backupState = BackupState()) }
                 }
@@ -133,9 +144,6 @@ class SettingsViewModel(
                     }
                 }
 
-                is SettingsAction.ChangePauseNotifications ->
-                    settingsDatastore.setNotifications(action.pref)
-
                 is SettingsAction.ChangeFontPref -> themeDatastore.setFontPref(action.font)
 
                 is SettingsAction.ChangeBiometricLock ->
@@ -172,8 +180,18 @@ class SettingsViewModel(
                     .launchIn(this)
 
                 settingsDatastore
-                    .getNotificationsFlow()
-                    .onEach { pref -> _state.update { it.copy(pauseNotifications = pref) } }
+                    .getReminderEnabledFlow()
+                    .onEach { pref -> _state.update { it.copy(reminderEnabled = pref) } }
+                    .launchIn(this)
+
+                settingsDatastore
+                    .getReminderModeFlow()
+                    .onEach { mode -> _state.update { it.copy(reminderMode = mode) } }
+                    .launchIn(this)
+
+                settingsDatastore
+                    .getAlarmSoundLabelFlow()
+                    .onEach { label -> _state.update { it.copy(alarmSoundName = label) } }
                     .launchIn(this)
 
                 themeDatastore

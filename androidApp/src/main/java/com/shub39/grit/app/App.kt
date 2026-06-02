@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,8 +69,19 @@ private sealed interface GlobalRoutes : NavKey {
     @Serializable data object App : GlobalRoutes
 }
 
+data class LaunchNavigationRequest(
+    val section: Sections,
+    val nonce: Long,
+)
+
 @Composable
-fun App(state: MainAppState, onRefreshSub: () -> Unit, onDismissChangelog: () -> Unit) {
+fun App(
+    state: MainAppState,
+    onRefreshSub: () -> Unit,
+    onDismissChangelog: () -> Unit,
+    launchNavigationRequest: LaunchNavigationRequest?,
+    onLaunchNavigationConsumed: () -> Unit,
+) {
     val mainBackStack = rememberNavBackStack(GlobalRoutes.App)
 
     if (state.currentChangelog != null) {
@@ -95,6 +107,8 @@ fun App(state: MainAppState, onRefreshSub: () -> Unit, onDismissChangelog: () ->
                     MainApp(
                         state = state,
                         onNavigateToPaywall = { mainBackStack.add(GlobalRoutes.PaywallPage) },
+                        launchNavigationRequest = launchNavigationRequest,
+                        onLaunchNavigationConsumed = onLaunchNavigationConsumed,
                     )
                 }
             },
@@ -102,16 +116,34 @@ fun App(state: MainAppState, onRefreshSub: () -> Unit, onDismissChangelog: () ->
 }
 
 @Composable
-private fun MainApp(state: MainAppState, onNavigateToPaywall: () -> Unit) {
+private fun MainApp(
+    state: MainAppState,
+    onNavigateToPaywall: () -> Unit,
+    launchNavigationRequest: LaunchNavigationRequest?,
+    onLaunchNavigationConsumed: () -> Unit,
+) {
     val windowSizeClass = LocalWindowSizeClass.current
 
     val appBackStack =
         rememberNavBackStack(
-            when (state.startingSection) {
+            when (launchNavigationRequest?.section ?: state.startingSection) {
                 Sections.Tasks -> AppSections.TaskPages
                 Sections.Habits -> AppSections.HabitPages
             }
         )
+
+    LaunchedEffect(launchNavigationRequest?.nonce) {
+        launchNavigationRequest?.let { request ->
+            val route =
+                when (request.section) {
+                    Sections.Tasks -> AppSections.TaskPages
+                    Sections.Habits -> AppSections.HabitPages
+                }
+            appBackStack.removeAll { it == route }
+            appBackStack.add(route)
+            onLaunchNavigationConsumed()
+        }
+    }
 
     when (windowSizeClass.widthSizeClass) {
         WindowWidthSizeClass.Compact -> {

@@ -20,9 +20,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.shub39.grit.core.data.notification.NotificationAlarmScheduler
-import com.shub39.grit.core.habits.domain.HabitRepo
-import com.shub39.grit.core.tasks.domain.TaskRepo
+import com.shub39.grit.core.data.notification.ReminderRescheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,28 +28,18 @@ import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 
-// reschedules all jobs when device restarts
+// Reschedules reminders after system events that commonly wipe or invalidate alarms.
 class BootReceiver : BroadcastReceiver(), KoinComponent {
     private val receiverScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun onReceive(context: Context, intent: Intent?) {
-        if (intent?.action == Intent.ACTION_BOOT_COMPLETED) {
-            val scheduler = get<NotificationAlarmScheduler>()
-            val habitRepo = get<HabitRepo>()
-            val taskRepo = get<TaskRepo>()
+        val action = intent?.action ?: return
+        if (action in rescheduleActions) {
             val pendingResult = goAsync()
 
             receiverScope.launch {
                 try {
-                    habitRepo.getHabits().forEach {
-                        scheduler.schedule(it)
-                        Log.d("BootReceiver", "Scheduled habit: ${it.id}")
-                    }
-
-                    taskRepo.getTasks().forEach {
-                        scheduler.schedule(it)
-                        Log.d("BootReceiver", "Scheduled task: ${it.id}")
-                    }
+                    get<ReminderRescheduler>().rescheduleAll(reason = action)
                 } catch (t: Exception) {
                     Log.e("BootReceiver", "Failed to initiate alarms", t)
                 } finally {
@@ -59,5 +47,15 @@ class BootReceiver : BroadcastReceiver(), KoinComponent {
                 }
             }
         }
+    }
+
+    companion object {
+        private val rescheduleActions =
+            setOf(
+                Intent.ACTION_BOOT_COMPLETED,
+                Intent.ACTION_MY_PACKAGE_REPLACED,
+                Intent.ACTION_TIMEZONE_CHANGED,
+                Intent.ACTION_TIME_CHANGED,
+            )
     }
 }

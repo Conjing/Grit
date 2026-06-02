@@ -20,22 +20,25 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.shub39.grit.core.now
 import com.shub39.grit.core.data.notification.GritNotificationManager
+import com.shub39.grit.core.data.notification.ReminderCoordinator
+import com.shub39.grit.core.data.notification.ReminderPayload
+import com.shub39.grit.core.data.notification.ReminderTargetType
+import com.shub39.grit.core.data.notification.getReminderPayloadOrNull
 import com.shub39.grit.core.habits.domain.HabitRepo
 import com.shub39.grit.core.habits.domain.HabitStatus
 import com.shub39.grit.core.habits.domain.isDueOn
-import com.shub39.grit.core.now
 import com.shub39.grit.core.tasks.domain.TaskRepo
 import com.shub39.grit.domain.AlarmScheduler
 import com.shub39.grit.domain.IntentActions
-import com.shub39.grit.domain.SettingsDatastore
-import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 
@@ -47,28 +50,28 @@ class GritIntentReceiver : BroadcastReceiver(), KoinComponent {
 
     private val receiverScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    @OptIn(ExperimentalTime::class)
     override fun onReceive(context: Context, intent: Intent?) {
         Log.d(TAG, "Received intent")
         val pendingResult = goAsync()
 
         receiverScope.launch {
             try {
-                val datastore = get<SettingsDatastore>()
-                val pauseNotifications = datastore.getNotificationsFlow().first()
+                if (intent == null) return@launch
 
-                if (intent != null && !pauseNotifications) {
-                    when (intent.action) {
-                        IntentActions.HABIT_NOTIFICATION.action -> habitNotification(intent)
+                when (intent.action) {
+                    IntentActions.HABIT_NOTIFICATION.action -> habitNotification(intent)
 
-                        IntentActions.ADD_HABIT_STATUS.action -> addHabitStatus(intent)
+                    IntentActions.ADD_HABIT_STATUS.action -> addHabitStatus(intent)
 
-                        IntentActions.MARK_TASK_DONE.action -> markTaskDone(intent)
+                    IntentActions.MARK_TASK_DONE.action -> markTaskDone(intent)
 
-                        IntentActions.TASK_NOTIFICATION.action -> taskNotification(intent)
+                    IntentActions.TASK_NOTIFICATION.action -> taskNotification(intent)
 
-                        else -> return@launch
-                    }
+                    IntentActions.REMINDER_SNOOZE.action ->
+                        intent.getReminderPayloadOrNull()?.let { get<ReminderCoordinator>().snoozeReminder(it) }
+
+                    IntentActions.REMINDER_DISMISS.action ->
+                        intent.getReminderPayloadOrNull()?.let { get<ReminderCoordinator>().dismissReminder(it) }
                 }
             } catch (t: Throwable) {
                 Log.e(TAG, "Error: ", t)
@@ -85,12 +88,10 @@ class GritIntentReceiver : BroadcastReceiver(), KoinComponent {
 
         val taskRepo = get<TaskRepo>()
         val task = taskRepo.getTaskById(taskId) ?: return
-
         taskRepo.upsertTask(task.copy(status = true, reminder = null))
 
         Log.d(TAG, "Task marked as complete successfully")
-
-        get<GritNotificationManager>().cancelNotification(taskId.toInt())
+        get<GritNotificationManager>().cancelNotification(task)
     }
 
     private suspend fun addHabitStatus(intent: Intent) {
@@ -99,52 +100,85 @@ class GritIntentReceiver : BroadcastReceiver(), KoinComponent {
         if (habitId < 0) return
 
         val habitRepo = get<HabitRepo>()
-
         habitRepo.insertHabitStatus(HabitStatus(habitId = habitId, date = LocalDate.now()))
 
         Log.d(TAG, "Habit status added successfully")
-
         get<GritNotificationManager>().cancelNotification(habitId.toInt())
     }
 
     private suspend fun taskNotification(intent: Intent) {
-        Log.d(TAG, "Task notification intent received")
-        val taskId = intent.getLongExtra("task_id", -1)
-        if (taskId < 0) return
+        val payload =
+            intent.getReminderPayloadOrNull()
+                ?: createTaskPayload(intent.getLongExtra("task_id", -1))
+                ?: return
 
         val taskRepo = get<TaskRepo>()
+        val task = taskRepo.getTaskById(payload.itemId) ?: return
+        if (task.status || task.reminder == null) return
 
-        val task = taskRepo.getTaskById(taskId) ?: return
-        if (!task.status && task.reminder != null) {
-            Log.d(TAG, "sending Task notification")
-            get<GritNotificationManager>().taskNotification(task)
-        }
+        Log.d(TAG, "Dispatching task reminder")
+        get<ReminderCoordinator>().dispatchTaskReminder(task, payload)
     }
 
     private suspend fun habitNotification(intent: Intent) {
-        Log.d(TAG, "Habit notification intent received")
-
-        val habitId = intent.getLongExtra("habit_id", -1)
-        if (habitId < 0L) return
+        val payload =
+            intent.getReminderPayloadOrNull()
+                ?: createHabitPayload(intent.getLongExtra("habit_id", -1))
+                ?: return
 
         val habitRepo = get<HabitRepo>()
-
-        val habit = habitRepo.getHabitById(habitId) ?: return
+        val habit = habitRepo.getHabitById(payload.itemId) ?: return
         if (!habit.reminder) return
 
-        if (!habit.isDueOn(LocalDate.now())) {
+        if (!habit.isDueOn(payload.occurrenceDate)) {
             get<AlarmScheduler>().schedule(habit)
             return
         }
 
-        // check if habit is completed today, if not then show notification
-        val habitStatus = habitRepo.getStatusForHabit(habitId)
-        if (habitStatus.any { it.date == LocalDate.now() }) {
-            Log.d(TAG, "Habit already completed today")
+        val habitStatus = habitRepo.getStatusForHabit(payload.itemId)
+        if (habitStatus.any { it.date == payload.occurrenceDate }) {
+            Log.d(TAG, "Habit already completed for ${payload.occurrenceDate}")
         } else {
-            get<GritNotificationManager>().habitNotification(habit)
+            get<ReminderCoordinator>().dispatchHabitReminder(habit, payload)
         }
 
         get<AlarmScheduler>().schedule(habit)
+    }
+
+    private suspend fun createHabitPayload(habitId: Long): ReminderPayload? {
+        if (habitId < 0L) return null
+        val habitRepo = get<HabitRepo>()
+        val habit = habitRepo.getHabitById(habitId) ?: return null
+        val occurrenceDate = LocalDate.now()
+
+        return ReminderPayload(
+            type = ReminderTargetType.HABIT,
+            itemId = habit.id,
+            title = habit.title,
+            description = habit.description.ifBlank { null },
+            section = com.shub39.grit.core.settings.domain.Sections.Habits,
+            occurrenceDate = occurrenceDate,
+            originalTriggerAtMillis =
+                kotlinx.datetime.LocalDateTime(occurrenceDate, habit.time.time)
+                    .toInstant(TimeZone.currentSystemDefault())
+                    .toEpochMilliseconds(),
+        )
+    }
+
+    private suspend fun createTaskPayload(taskId: Long): ReminderPayload? {
+        if (taskId < 0L) return null
+        val taskRepo = get<TaskRepo>()
+        val task = taskRepo.getTaskById(taskId) ?: return null
+        val reminder = task.reminder ?: return null
+
+        return ReminderPayload(
+            type = ReminderTargetType.TASK,
+            itemId = task.id,
+            title = task.title,
+            section = com.shub39.grit.core.settings.domain.Sections.Tasks,
+            occurrenceDate = reminder.date,
+            originalTriggerAtMillis =
+                reminder.toInstant(TimeZone.currentSystemDefault()).toEpochMilliseconds(),
+        )
     }
 }

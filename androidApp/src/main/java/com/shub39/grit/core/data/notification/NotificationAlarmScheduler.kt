@@ -25,23 +25,29 @@ import android.util.Log
 import com.shub39.grit.core.data.GritIntentReceiver
 import com.shub39.grit.core.habits.domain.Habit
 import com.shub39.grit.core.habits.domain.nextDueDateOnOrAfter
-import com.shub39.grit.core.now
+import com.shub39.grit.core.settings.domain.Sections
 import com.shub39.grit.core.tasks.domain.Task
 import com.shub39.grit.domain.AlarmScheduler
 import com.shub39.grit.domain.IntentActions
 import kotlin.time.ExperimentalTime
+import kotlin.time.Clock
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import org.koin.core.annotation.Single
 
 // implementation of AlarmScheduler using AlarmManager
 @Single(binds = [AlarmScheduler::class])
 @OptIn(ExperimentalTime::class)
-class NotificationAlarmScheduler(private val context: Context) : AlarmScheduler {
+class NotificationAlarmScheduler(
+    private val context: Context,
+    private val runtimeStore: ReminderRuntimeStore,
+) : AlarmScheduler {
 
     companion object {
         private const val TAG = "NotificationAlarmScheduler"
@@ -52,116 +58,87 @@ class NotificationAlarmScheduler(private val context: Context) : AlarmScheduler 
     override fun schedule(habit: Habit) {
         cancel(habit)
         if (!habit.reminder) return
-        val now = LocalDateTime.Companion.now()
+
+        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
         val candidateDate =
             if (habit.time.time <= now.time) {
                 now.date.plus(1, DateTimeUnit.DAY)
             } else {
                 now.date
             }
+
         val scheduleDate = habit.nextDueDateOnOrAfter(candidateDate) ?: return
-        val scheduleTime =
-            LocalDateTime(
-                date = scheduleDate,
-                time = LocalTime(hour = habit.time.hour, minute = habit.time.minute),
-            )
+        val scheduleTime = habit.triggerAt(scheduleDate)
 
         if (scheduleTime < now) {
             Log.d(TAG, "Habit '${habit.title}' reminder time is in the past")
             return
         }
 
-        val notificationIntent =
-            Intent(context, GritIntentReceiver::class.java).apply {
-                action = IntentActions.HABIT_NOTIFICATION.action
-                putExtra("habit_id", habit.id)
-            }
-
-        val pendingIntent =
-            PendingIntent.getBroadcast(
-                context,
-                habit.id.toInt(),
-                notificationIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        val payload =
+            ReminderPayload(
+                type = ReminderTargetType.HABIT,
+                itemId = habit.id,
+                title = habit.title,
+                description = habit.description.ifBlank { null },
+                section = Sections.Habits,
+                occurrenceDate = scheduleDate,
+                originalTriggerAtMillis =
+                    scheduleTime.toInstant(TimeZone.currentSystemDefault()).toEpochMilliseconds(),
             )
 
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            scheduleTime.toInstant(TimeZone.Companion.currentSystemDefault()).toEpochMilliseconds(),
-            pendingIntent,
+        scheduleBaseAlarm(
+            action = IntentActions.HABIT_NOTIFICATION.action,
+            requestCode = habit.id.toInt(),
+            payload = payload,
+            triggerAtMillis = payload.originalTriggerAtMillis,
         )
-
-        Log.d(TAG, "Scheduled: Habit '${habit.title}' at $scheduleTime")
     }
 
     override fun schedule(task: Task) {
         cancel(task)
-        if (task.reminder == null) return
-        val scheduleTime = task.reminder!!
+        val scheduleTime = task.reminder ?: return
 
-        val now = LocalDateTime.Companion.now()
-
+        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
         if (scheduleTime < now) {
             Log.d(TAG, "Task '${task.title}' reminder time is in the past")
             return
         }
 
-        val notificationIntent =
-            Intent(context, GritIntentReceiver::class.java).apply {
-                action = IntentActions.TASK_NOTIFICATION.action
-                putExtra("task_id", task.id)
-            }
-
-        val pendingIntent =
-            PendingIntent.getBroadcast(
-                context,
-                task.id.toInt(),
-                notificationIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        val payload =
+            ReminderPayload(
+                type = ReminderTargetType.TASK,
+                itemId = task.id,
+                title = task.title,
+                section = Sections.Tasks,
+                occurrenceDate = scheduleTime.date,
+                originalTriggerAtMillis =
+                    scheduleTime.toInstant(TimeZone.currentSystemDefault()).toEpochMilliseconds(),
             )
 
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            scheduleTime.toInstant(TimeZone.Companion.currentSystemDefault()).toEpochMilliseconds(),
-            pendingIntent,
+        scheduleBaseAlarm(
+            action = IntentActions.TASK_NOTIFICATION.action,
+            requestCode = task.id.toInt(),
+            payload = payload,
+            triggerAtMillis = payload.originalTriggerAtMillis,
         )
-
-        Log.d(TAG, "Scheduled: Task '${task.title}' at $scheduleTime")
     }
 
     override fun cancel(habit: Habit) {
-        val cancelIntent =
-            Intent(context, GritIntentReceiver::class.java).apply {
-                action = IntentActions.HABIT_NOTIFICATION.action
-            }
-
-        val pendingIntent =
-            PendingIntent.getBroadcast(
-                context,
-                habit.id.toInt(),
-                cancelIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
-
-        alarmManager.cancel(pendingIntent)
+        cancelByAction(IntentActions.HABIT_NOTIFICATION.action, habit.id.toInt())
+        runtimeStore.getTrackedSession()
+            ?.takeIf {
+                it.payload.type == ReminderTargetType.HABIT && it.payload.itemId == habit.id
+            }?.let { cancelFollowUp(it.payload) }
         Log.d(TAG, "Cancelled: Habit '${habit.title}'")
     }
 
     override fun cancel(task: Task) {
-        val cancelIntent =
-            Intent(context, GritIntentReceiver::class.java).apply {
-                action = IntentActions.TASK_NOTIFICATION.action
-            }
-
-        val pendingIntent =
-            PendingIntent.getBroadcast(
-                context,
-                task.id.toInt(),
-                cancelIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
-
-        alarmManager.cancel(pendingIntent)
+        cancelByAction(IntentActions.TASK_NOTIFICATION.action, task.id.toInt())
+        runtimeStore.getTrackedSession()
+            ?.takeIf {
+                it.payload.type == ReminderTargetType.TASK && it.payload.itemId == task.id
+            }?.let { cancelFollowUp(it.payload) }
         Log.d(TAG, "Cancelled: Task '${task.title}'")
     }
 
@@ -170,4 +147,87 @@ class NotificationAlarmScheduler(private val context: Context) : AlarmScheduler 
             alarmManager.cancelAll()
         }
     }
+
+    fun scheduleFollowUp(payload: ReminderPayload, triggerAtMillis: Long) {
+        val followUpPayload = payload
+        scheduleBaseAlarm(
+            action = reminderActionFor(payload),
+            requestCode = followUpPayload.followUpRequestCode(),
+            payload = followUpPayload,
+            triggerAtMillis = triggerAtMillis,
+        )
+        Log.d(TAG, "Scheduled follow-up for ${payload.type} ${payload.itemId} at $triggerAtMillis")
+    }
+
+    fun cancelFollowUp(payload: ReminderPayload) {
+        cancelByAction(reminderActionFor(payload), payload.followUpRequestCode())
+        Log.d(TAG, "Cancelled follow-up for ${payload.type} ${payload.itemId}")
+    }
+
+    private fun scheduleBaseAlarm(
+        action: String,
+        requestCode: Int,
+        payload: ReminderPayload,
+        triggerAtMillis: Long,
+    ) {
+        val notificationIntent =
+            Intent(context, GritIntentReceiver::class.java)
+                .setAction(action)
+                .putReminderPayload(payload)
+
+        val pendingIntent =
+            PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                notificationIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+
+        try {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerAtMillis,
+                pendingIntent,
+            )
+        } catch (securityException: SecurityException) {
+            Log.w(
+                TAG,
+                "Exact alarm access denied for ${payload.type} '${payload.title}', falling back to inexact while-idle alarm",
+                securityException,
+            )
+            alarmManager.setAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerAtMillis,
+                pendingIntent,
+            )
+        }
+
+        Log.d(TAG, "Scheduled ${payload.type} '${payload.title}' at $triggerAtMillis")
+    }
+
+    private fun cancelByAction(action: String, requestCode: Int) {
+        val cancelIntent = Intent(context, GritIntentReceiver::class.java).setAction(action)
+
+        val pendingIntent =
+            PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                cancelIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+
+        alarmManager.cancel(pendingIntent)
+    }
+
+    private fun reminderActionFor(payload: ReminderPayload): String =
+        when (payload.type) {
+            ReminderTargetType.HABIT -> IntentActions.HABIT_NOTIFICATION.action
+            ReminderTargetType.TASK -> IntentActions.TASK_NOTIFICATION.action
+        }
+
+    private fun Habit.triggerAt(date: LocalDate): LocalDateTime =
+        LocalDateTime(
+            date = date,
+            time = LocalTime(hour = time.hour, minute = time.minute),
+        )
 }

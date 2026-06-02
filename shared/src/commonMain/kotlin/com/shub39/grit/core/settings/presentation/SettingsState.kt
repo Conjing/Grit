@@ -19,6 +19,7 @@ package com.shub39.grit.core.settings.presentation
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.shub39.grit.core.components.Changelog
+import com.shub39.grit.core.settings.domain.ReminderMode
 import com.shub39.grit.core.settings.domain.Sections
 import com.shub39.grit.core.settings.domain.backup.ExportState
 import com.shub39.grit.core.settings.domain.backup.RestoreState
@@ -37,7 +38,9 @@ data class SettingsState(
     val is24Hr: Boolean = false,
     val reorderTasks: Boolean = false,
     val startOfTheWeek: DayOfWeek = DayOfWeek.MONDAY,
-    val pauseNotifications: Boolean = false,
+    val reminderEnabled: Boolean = true,
+    val reminderMode: ReminderMode = ReminderMode.SILENT,
+    val alarmSoundName: String? = null,
     val startingPage: Sections = Sections.Tasks,
     val isBiometricLockOn: Boolean? = null,
     val isBiometricLockAvailable: Boolean = false,

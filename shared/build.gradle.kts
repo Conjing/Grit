@@ -83,6 +83,11 @@ kotlin {
             implementation(libs.koin.compose.viewmodel.navigation)
             implementation(libs.koin.annotations)
         }
+
+        androidMain.dependencies {
+            implementation(libs.filekit.core)
+            implementation(libs.filekit.dialogs)
+        }
     }
 }
 

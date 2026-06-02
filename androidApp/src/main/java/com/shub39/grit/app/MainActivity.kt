@@ -16,6 +16,7 @@
  */
 package com.shub39.grit.app
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
@@ -34,7 +35,11 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shub39.grit.core.LocalWindowSizeClass
 import com.shub39.grit.core.components.InitialLoading
-import com.shub39.grit.core.data.notification.GritNotificationManager.Companion.createNotificationChannel
+import com.shub39.grit.core.data.notification.EXTRA_REMINDER_TARGET_SECTION
+import com.shub39.grit.core.data.notification.EXTRA_STOP_ACTIVE_REMINDER
+import com.shub39.grit.core.data.notification.ReminderCoordinator
+import com.shub39.grit.core.data.notification.getReminderPayloadOrNull
+import com.shub39.grit.core.settings.domain.Sections
 import com.shub39.grit.core.theme.GritTheme
 import com.shub39.grit.domain.BiometricUtils
 import com.shub39.grit.viewmodel.MainViewModel
@@ -45,6 +50,8 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : FragmentActivity() {
     private val mainViewModel: MainViewModel by viewModel()
+    private val reminderCoordinator: ReminderCoordinator by inject()
+    private var launchNavigationRequest by mutableStateOf<LaunchNavigationRequest?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,7 +59,7 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         FileKit.init(this)
 
-        createNotificationChannel(this)
+        handleLaunchIntent(intent)
 
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
@@ -89,13 +96,22 @@ class MainActivity : FragmentActivity() {
                             state = state,
                             onRefreshSub = { mainViewModel.updateSubscription() },
                             onDismissChangelog = { mainViewModel.dismissChangelog() },
+                            launchNavigationRequest = launchNavigationRequest,
+                            onLaunchNavigationConsumed = { launchNavigationRequest = null },
                         )
+                        ReminderSetupController()
                     } else {
                         InitialLoading()
                     }
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleLaunchIntent(intent)
     }
 
     private fun showBiometricPrompt(onSuccess: () -> Unit, onError: (Int, CharSequence) -> Unit) {
@@ -157,5 +173,18 @@ class MainActivity : FragmentActivity() {
                 finish()
             }
         }
+    }
+
+    private fun handleLaunchIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra(EXTRA_STOP_ACTIVE_REMINDER, false) == true) {
+            reminderCoordinator.handleReminderOpened(intent.getReminderPayloadOrNull())
+        }
+
+        launchNavigationRequest =
+            intent?.getStringExtra(EXTRA_REMINDER_TARGET_SECTION)?.let { section ->
+                runCatching { Sections.valueOf(section) }.getOrNull()
+            }?.let { section ->
+                LaunchNavigationRequest(section = section, nonce = System.currentTimeMillis())
+            }
     }
 }

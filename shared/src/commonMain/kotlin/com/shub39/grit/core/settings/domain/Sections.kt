@@ -16,6 +16,9 @@
  */
 package com.shub39.grit.core.settings.domain
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 enum class Sections {
     Tasks,
     Habits,

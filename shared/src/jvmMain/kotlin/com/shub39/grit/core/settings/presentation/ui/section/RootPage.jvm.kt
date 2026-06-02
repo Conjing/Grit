@@ -17,5 +17,15 @@
 package com.shub39.grit.core.settings.presentation.ui.section
 
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.runtime.Composable
 
 actual fun LazyListScope.languagePicker(onClick: () -> Unit) {}
+
+actual fun LazyListScope.reminderSystemSettingsSection() {}
+
+@Composable
+actual fun AlarmSoundSettings(
+    soundName: String?,
+    onPick: (path: String, label: String) -> Unit,
+    onReset: () -> Unit,
+) {}

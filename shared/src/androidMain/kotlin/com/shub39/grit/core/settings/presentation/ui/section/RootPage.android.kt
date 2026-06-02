@@ -16,18 +16,35 @@
  */
 package com.shub39.grit.core.settings.presentation.ui.section
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.unit.dp
 import com.shub39.grit.core.shared_ui.detachedItemShape
+import com.shub39.grit.core.shared_ui.endItemShape
+import com.shub39.grit.core.shared_ui.leadingItemShape
 import com.shub39.grit.core.shared_ui.listItemColors
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.name
+import io.github.vinceglb.filekit.path
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.openFilePicker
 import grit.shared.generated.resources.*
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -55,5 +72,74 @@ actual fun LazyListScope.languagePicker(onClick: () -> Unit) {
                 modifier = Modifier.clip(detachedItemShape()).clickable { onClick() },
             )
         }
+    }
+}
+
+@Composable
+actual fun AlarmSoundSettings(
+    soundName: String?,
+    onPick: (path: String, label: String) -> Unit,
+    onReset: () -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        ListItem(
+            colors = listItemColors(),
+            leadingContent = {
+                Icon(
+                    painter = painterResource(Res.drawable.alarm),
+                    contentDescription = null,
+                )
+            },
+            headlineContent = { Text(text = stringResource(Res.string.alarm_sound)) },
+            supportingContent = {
+                Text(
+                    text = soundName ?: stringResource(Res.string.alarm_sound_default_desc),
+                    color =
+                        if (soundName == null) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onSurface,
+                )
+            },
+            trailingContent = {
+                Icon(
+                    painter = painterResource(Res.drawable.arrow_forward),
+                    contentDescription = null,
+                )
+            },
+            modifier =
+                Modifier.clip(leadingItemShape()).clickable {
+                    scope.launch {
+                        val file =
+                            FileKit.openFilePicker(
+                                type = FileKitType.File("mp3", "wav", "ogg", "m4a", "aac", "flac")
+                            )
+
+                        if (file != null) {
+                            val pickedUri = Uri.parse(file.path)
+                            if (pickedUri.scheme == "content") {
+                                runCatching {
+                                    context.contentResolver.takePersistableUriPermission(
+                                        pickedUri,
+                                        Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                                    )
+                                }
+                            }
+                            onPick(file.path, file.name)
+                        }
+                    }
+                },
+        )
+
+        ListItem(
+            colors = listItemColors(),
+            headlineContent = { Text(text = stringResource(Res.string.alarm_sound_reset)) },
+            supportingContent = {
+                Text(text = stringResource(Res.string.alarm_sound_reset_desc))
+            },
+            modifier =
+                Modifier.clip(endItemShape()).clickable(enabled = soundName != null) { onReset() },
+        )
     }
 }
