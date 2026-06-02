@@ -23,10 +23,10 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import com.shub39.grit.billing.BillingInitializer
 import com.shub39.grit.core.data.notification.GritNotificationManager.Companion.createNotificationChannel
 import com.shub39.grit.di.GritModules
-import com.shub39.grit.widgets.all_tasks_widget.AllTasksWidgetReceiver
 import com.shub39.grit.widgets.habit_overview_widget.HabitOverviewWidgetReceiver
 import com.shub39.grit.widgets.habit_streak_widget.HabitStreakWidgetReceiver
 import com.shub39.grit.widgets.habit_week_chart_widget.HabitWeekChartWidgetReceiver
+import com.shub39.grit.widgets.todo_tasks_widget.TodoTasksWidgetReceiver
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.koin.android.ext.koin.androidContext
@@ -54,7 +54,7 @@ class GritApplication : Application() {
             MainScope().launch {
                 manager.setWidgetPreviews(HabitOverviewWidgetReceiver::class)
                 manager.setWidgetPreviews(HabitStreakWidgetReceiver::class)
-                manager.setWidgetPreviews(AllTasksWidgetReceiver::class)
+                manager.setWidgetPreviews(TodoTasksWidgetReceiver::class)
                 manager.setWidgetPreviews(HabitWeekChartWidgetReceiver::class)
             }
         }

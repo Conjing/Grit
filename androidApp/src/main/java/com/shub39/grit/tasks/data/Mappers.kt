@@ -18,6 +18,7 @@ package com.shub39.grit.tasks.data
 
 import com.shub39.grit.core.tasks.domain.Category
 import com.shub39.grit.core.tasks.domain.Task
+import com.shub39.grit.core.tasks.domain.TaskTimeMode
 import com.shub39.grit.tasks.data.database.CategoryEntity
 import com.shub39.grit.tasks.data.database.TaskEntity
 
@@ -29,6 +30,9 @@ fun Task.toTaskEntity(): TaskEntity {
         index = index,
         status = status,
         reminder = reminder,
+        timeMode = timeMode.name,
+        durationMinutes = durationMinutes,
+        endAt = endAt,
     )
 }
 
@@ -40,6 +44,9 @@ fun TaskEntity.toTask(): Task {
         index = index,
         status = status,
         reminder = reminder,
+        timeMode = runCatching { TaskTimeMode.valueOf(timeMode) }.getOrDefault(TaskTimeMode.DURATION),
+        durationMinutes = durationMinutes,
+        endAt = endAt,
     )
 }
 

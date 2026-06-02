@@ -23,6 +23,7 @@ import com.shub39.grit.core.habits.domain.HabitRepeatMode
 import com.shub39.grit.core.habits.domain.HabitStatus
 import com.shub39.grit.core.tasks.domain.Category
 import com.shub39.grit.core.tasks.domain.Task
+import com.shub39.grit.core.tasks.domain.TaskTimeMode
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
@@ -77,6 +78,9 @@ fun TaskSchema.toTask(): Task {
         status = status,
         index = index,
         reminder = reminder?.let { Converters.dateFromTimestamp(it) },
+        timeMode = runCatching { TaskTimeMode.valueOf(timeMode) }.getOrDefault(TaskTimeMode.DURATION),
+        durationMinutes = durationMinutes,
+        endAt = endAt?.let { Converters.dateFromTimestamp(it) },
     )
 }
 
@@ -88,6 +92,9 @@ fun Task.toTaskSchema(): TaskSchema {
         status = status,
         index = index,
         reminder = reminder?.let { Converters.dateToTimestamp(it) },
+        timeMode = timeMode.name,
+        durationMinutes = durationMinutes,
+        endAt = endAt?.let { Converters.dateToTimestamp(it) },
     )
 }
 

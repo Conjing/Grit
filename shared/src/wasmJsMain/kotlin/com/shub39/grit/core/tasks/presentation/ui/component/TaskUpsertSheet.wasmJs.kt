@@ -17,10 +17,6 @@
 package com.shub39.grit.core.tasks.presentation.ui.component
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.shub39.grit.core.tasks.domain.Category
 import com.shub39.grit.core.tasks.domain.Task
@@ -36,8 +32,6 @@ actual fun TaskUpsertSheet(
     modifier: Modifier,
     isEditSheet: Boolean,
 ) {
-    var showDateTimePicker by remember { mutableStateOf(false) }
-
     TaskUpsertSheetContent(
         task = task,
         categories = categories,
@@ -46,10 +40,6 @@ actual fun TaskUpsertSheet(
         onDelete = onDelete,
         is24Hr = is24Hr,
         isEditSheet = isEditSheet,
-        notificationPermission = true,
-        showDateTimePicker = showDateTimePicker,
-        updateDateTimePickerVisibility = { showDateTimePicker = it },
-        onPermissionRequest = {},
         modifier = modifier,
     )
 }

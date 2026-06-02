@@ -56,9 +56,6 @@ class NotificationAlarmScheduler(
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     override fun schedule(habit: Habit) {
-        cancel(habit)
-        if (!habit.reminder) return
-
         val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
         val candidateDate =
             if (habit.time.time <= now.time) {
@@ -66,6 +63,19 @@ class NotificationAlarmScheduler(
             } else {
                 now.date
             }
+
+        scheduleHabitFrom(habit, candidateDate)
+    }
+
+    override fun scheduleNextHabitAfter(habit: Habit, date: LocalDate) {
+        scheduleHabitFrom(habit, date.plus(1, DateTimeUnit.DAY))
+    }
+
+    private fun scheduleHabitFrom(habit: Habit, candidateDate: LocalDate) {
+        cancel(habit)
+        if (!habit.reminder) return
+
+        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
 
         val scheduleDate = habit.nextDueDateOnOrAfter(candidateDate) ?: return
         val scheduleTime = habit.triggerAt(scheduleDate)
@@ -94,6 +104,9 @@ class NotificationAlarmScheduler(
             triggerAtMillis = payload.originalTriggerAtMillis,
         )
     }
+
+    override fun canScheduleExactAlarms(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
 
     override fun schedule(task: Task) {
         cancel(task)
@@ -183,26 +196,38 @@ class NotificationAlarmScheduler(
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 
-        try {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerAtMillis,
-                pendingIntent,
-            )
-        } catch (securityException: SecurityException) {
+        if (canScheduleExactAlarms()) {
+            try {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    pendingIntent,
+                )
+            } catch (securityException: SecurityException) {
+                Log.w(
+                    TAG,
+                    "Exact alarm access denied for ${payload.type} '${payload.title}', falling back to inexact while-idle alarm",
+                    securityException,
+                )
+                scheduleInexactWhileIdle(triggerAtMillis, pendingIntent)
+            }
+        } else {
             Log.w(
                 TAG,
-                "Exact alarm access denied for ${payload.type} '${payload.title}', falling back to inexact while-idle alarm",
-                securityException,
+                "Exact alarm access unavailable for ${payload.type} '${payload.title}', falling back to inexact while-idle alarm",
             )
-            alarmManager.setAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerAtMillis,
-                pendingIntent,
-            )
+            scheduleInexactWhileIdle(triggerAtMillis, pendingIntent)
         }
 
         Log.d(TAG, "Scheduled ${payload.type} '${payload.title}' at $triggerAtMillis")
+    }
+
+    private fun scheduleInexactWhileIdle(triggerAtMillis: Long, pendingIntent: PendingIntent) {
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            triggerAtMillis,
+            pendingIntent,
+        )
     }
 
     private fun cancelByAction(action: String, requestCode: Int) {

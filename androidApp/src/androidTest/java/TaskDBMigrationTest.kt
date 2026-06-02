@@ -47,9 +47,9 @@ class TaskDBMigrationTest {
     }
 
     @Test
-    fun migration4to5_containsCorrectData() = runBlocking {
+    fun migration5to6_containsCorrectData() = runBlocking {
         helper
-            .createDatabase(4)
+            .createDatabase(5)
             .apply {
                 (0..10).forEach { category ->
                     execSQL(
@@ -73,7 +73,7 @@ class TaskDBMigrationTest {
             }
             .close()
 
-        val db = helper.runMigrationsAndValidate(5, listOf())
+        val db = helper.runMigrationsAndValidate(6, listOf())
 
         // --- Categories assertions ---
         db.prepare("SELECT COUNT(*) FROM categories").use { stmt ->
@@ -106,7 +106,7 @@ class TaskDBMigrationTest {
         }
 
         db.prepare(
-                "SELECT categoryId, title, status, [index] FROM task ORDER BY categoryId, [index]"
+                "SELECT categoryId, title, status, [index], timeMode, durationMinutes, endAt FROM task ORDER BY categoryId, [index]"
             )
             .use { stmt ->
                 var count = 0
@@ -116,6 +116,7 @@ class TaskDBMigrationTest {
                     val title = stmt.getText(1)
                     val status = stmt.getLong(2).toInt()
                     val index = stmt.getLong(3).toInt()
+                    val timeMode = stmt.getText(4)
 
                     // Title pattern
                     assertThat(title).isEqualTo("Task $index")
@@ -124,6 +125,9 @@ class TaskDBMigrationTest {
                     // Index matches the looped task value
                     assertThat(index).isAtLeast(0)
                     assertThat(index).isAtMost(10)
+                    assertThat(timeMode).isEqualTo("DURATION")
+                    assertThat(stmt.isNull(5)).isTrue()
+                    assertThat(stmt.isNull(6)).isTrue()
                     // CategoryId matches existing categories
                     assertThat(categoryId).isAtLeast(0)
                     assertThat(categoryId).isAtMost(10)

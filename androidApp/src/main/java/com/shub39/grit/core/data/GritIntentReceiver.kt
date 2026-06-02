@@ -88,7 +88,7 @@ class GritIntentReceiver : BroadcastReceiver(), KoinComponent {
 
         val taskRepo = get<TaskRepo>()
         val task = taskRepo.getTaskById(taskId) ?: return
-        taskRepo.upsertTask(task.copy(status = true, reminder = null))
+        taskRepo.upsertTask(task.copy(status = true))
 
         Log.d(TAG, "Task marked as complete successfully")
         get<GritNotificationManager>().cancelNotification(task)

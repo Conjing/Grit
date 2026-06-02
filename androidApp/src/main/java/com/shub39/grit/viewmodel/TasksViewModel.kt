@@ -69,11 +69,11 @@ class TasksViewModel(
         viewModelScope.launch {
             when (action) {
                 is TaskAction.UpsertTask -> {
-                    if (action.task.status) {
-                        repo.upsertTask(action.task.copy(reminder = null))
-                    } else {
-                        repo.upsertTask(action.task)
+                    repo.upsertTask(action.task)
 
+                    if (action.task.status) {
+                        scheduler.cancel(action.task)
+                    } else {
                         scheduler.schedule(action.task)
                     }
                 }
@@ -116,7 +116,10 @@ class TasksViewModel(
                     _state.update { it.copy(currentCategory = it.tasks.keys.firstOrNull()) }
                 }
 
-                is TaskAction.DeleteTask -> repo.deleteTask(action.task)
+                is TaskAction.DeleteTask -> {
+                    scheduler.cancel(action.task)
+                    repo.deleteTask(action.task)
+                }
             }
         }
     }
@@ -162,6 +165,7 @@ class TasksViewModel(
 
     private suspend fun deleteTasks() {
         for (task in _state.value.completedTasks) {
+            scheduler.cancel(task)
             repo.deleteTask(task)
         }
     }
@@ -171,8 +175,8 @@ class TasksViewModel(
     }
 
     private suspend fun deleteCategory(category: Category) {
-        if (_state.value.currentCategory == category) {
-            _state.update { it.copy(currentCategory = it.tasks.keys.first()) }
+        for (task in _state.value.tasks[category].orEmpty()) {
+            scheduler.cancel(task)
         }
 
         repo.deleteCategory(category)

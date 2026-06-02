@@ -18,9 +18,12 @@ package com.shub39.grit.domain
 
 import com.shub39.grit.core.habits.domain.Habit
 import com.shub39.grit.core.tasks.domain.Task
+import kotlinx.datetime.LocalDate
 
 interface AlarmScheduler {
     fun schedule(habit: Habit)
+
+    fun scheduleNextHabitAfter(habit: Habit, date: LocalDate)
 
     fun schedule(task: Task)
 
@@ -29,4 +32,6 @@ interface AlarmScheduler {
     fun cancel(task: Task)
 
     fun cancelAll()
+
+    fun canScheduleExactAlarms(): Boolean
 }

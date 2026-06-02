@@ -113,6 +113,16 @@ fun About(versionName: String, onNavigateBack: () -> Unit, modifier: Modifier = 
             aboutApp(versionName = versionName, uriHandler = uriHandler)
             engagementLinks(uriHandler)
             item {
+                Text(
+                    text = stringResource(Res.string.about_fork_notice),
+                    style =
+                        MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                )
+            }
+            item {
                 ListItem(
                     colors = listItemColors(),
                     leadingContent = {

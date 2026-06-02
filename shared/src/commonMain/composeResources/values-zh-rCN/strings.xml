@@ -71,6 +71,7 @@
     <string name="reorder_tasks">重新排序</string>
     <string name="reorder_tasks_desc">完成后重新排序任务</string>
     <string name="translate">翻译</string>
+    <string name="about_fork_notice">本软件基于原作者 shub39 的 Grit 6.0.0 版本改造。上方联系方式和捐助入口属于原作者。</string>
     <string name="changelog">更新日志</string>
     <string name="add_reminder">添加提醒</string>
     <string name="save">保存</string>
@@ -114,4 +115,14 @@
     <string name="tap_card_to_open_app">点卡片即可进入 Grit 完成打卡。</string>
     <string name="snooze_5_min">5分钟后提醒</string>
     <string name="close_for_today">关闭</string>
+    <string name="task_date">日期</string>
+    <string name="task_start_time">开始时间</string>
+    <string name="task_end_time">结束时间</string>
+    <string name="task_time_mode">时间录入方式</string>
+    <string name="task_time_mode_duration">开始时间 + 时长</string>
+    <string name="task_time_mode_end">开始时间 + 结束时间</string>
+    <string name="task_duration_hours">小时</string>
+    <string name="task_duration_minutes">分钟</string>
+    <string name="task_optional_time_note">如果不填写时长或结束时间，任务会按一小时高度显示，且不显示时长文字。</string>
+    <string name="task_end_after_start_error">结束时间必须晚于开始时间。</string>
 </resources>

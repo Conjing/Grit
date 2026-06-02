@@ -623,7 +623,7 @@ fun HabitUpsertSheetContent(
                     }
                 },
             ) {
-                DatePicker(state = datePickerState)
+                DatePicker(state = datePickerState, showModeToggle = false)
             }
         }
     }

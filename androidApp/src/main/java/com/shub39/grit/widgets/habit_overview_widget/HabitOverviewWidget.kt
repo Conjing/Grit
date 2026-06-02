@@ -65,6 +65,7 @@ import com.shub39.grit.core.habits.domain.HabitRepo
 import com.shub39.grit.core.habits.domain.HabitStatus
 import com.shub39.grit.core.habits.domain.isDueOn
 import com.shub39.grit.core.now
+import com.shub39.grit.domain.AlarmScheduler
 import com.shub39.grit.widgets.WidgetSize
 import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.launch
@@ -79,6 +80,7 @@ class HabitOverviewWidget : GlanceAppWidget(), KoinComponent {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val repo = get<HabitRepo>()
+        val scheduler = get<AlarmScheduler>()
 
         provideContent {
             val size = LocalSize.current
@@ -96,6 +98,7 @@ class HabitOverviewWidget : GlanceAppWidget(), KoinComponent {
                                         habitId = habitWithStatus.first.id,
                                         date = LocalDate.now(),
                                     )
+                                    scheduler.schedule(habitWithStatus.first)
                                 } else {
                                     repo.insertHabitStatus(
                                         habitStatus =
@@ -103,6 +106,10 @@ class HabitOverviewWidget : GlanceAppWidget(), KoinComponent {
                                                 habitId = habitWithStatus.first.id,
                                                 date = LocalDate.now(),
                                             )
+                                    )
+                                    scheduler.scheduleNextHabitAfter(
+                                        habit = habitWithStatus.first,
+                                        date = LocalDate.now(),
                                     )
                                 }
                             }

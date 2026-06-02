@@ -95,6 +95,7 @@ fun FossPaywall(modifier: Modifier = Modifier) {
                         style =
                             MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
                     )
+
                 }
 
                 FilledTonalButton(
@@ -114,6 +115,15 @@ fun FossPaywall(modifier: Modifier = Modifier) {
                         style = ButtonDefaults.textStyleFor(ButtonDefaults.MediumContainerHeight),
                     )
                 }
+
+                Text(
+                    text = stringResource(Res.string.about_fork_notice),
+                    style =
+                        MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        ),
+                )
             }
         }
     }

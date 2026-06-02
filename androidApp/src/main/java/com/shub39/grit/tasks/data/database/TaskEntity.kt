@@ -43,4 +43,7 @@ data class TaskEntity(
     val status: Boolean = false,
     val index: Int = 0,
     @ColumnInfo(name = "reminder", defaultValue = "NULL") val reminder: LocalDateTime? = null,
+    @ColumnInfo(name = "timeMode", defaultValue = "'DURATION'") val timeMode: String = "DURATION",
+    @ColumnInfo(name = "durationMinutes", defaultValue = "NULL") val durationMinutes: Int? = null,
+    @ColumnInfo(name = "endAt", defaultValue = "NULL") val endAt: LocalDateTime? = null,
 )

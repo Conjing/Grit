@@ -23,6 +23,7 @@ import com.shub39.grit.core.habits.domain.HabitRepo
 import com.shub39.grit.core.habits.domain.HabitStatus
 import com.shub39.grit.core.habits.presentation.HabitState
 import com.shub39.grit.core.habits.presentation.HabitsAction
+import com.shub39.grit.core.now
 import com.shub39.grit.domain.AlarmScheduler
 import com.shub39.grit.domain.SettingsDatastore
 import kotlinx.coroutines.Job
@@ -199,8 +200,14 @@ class HabitViewModel(
 
         if (isHabitCompleted) {
             repo.deleteHabitStatus(habit.id, date)
+            if (date == LocalDate.now()) {
+                scheduler.schedule(habit)
+            }
         } else {
             repo.insertHabitStatus(HabitStatus(habitId = habit.id, date = date))
+            if (date == LocalDate.now()) {
+                scheduler.scheduleNextHabitAfter(habit, date)
+            }
         }
     }
 }

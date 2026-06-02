@@ -16,8 +16,19 @@
  */
 package com.shub39.grit.core.tasks.domain
 
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
+
+@Serializable
+enum class TaskTimeMode {
+    DURATION,
+    END_TIME,
+}
 
 /**
  * Model for Tasks
@@ -26,7 +37,7 @@ import kotlinx.serialization.Serializable
  * @param title : the content of the task
  * @param status : task completion status
  * @param index : used for sorting in UI
- * @param reminder : [LocalDateTime] if reminder is set
+ * @param reminder : task start date/time, also used as the reminder trigger
  */
 @Serializable
 data class Task(
@@ -36,4 +47,27 @@ data class Task(
     val index: Int = 0,
     val status: Boolean = false,
     val reminder: LocalDateTime? = null,
+    val timeMode: TaskTimeMode = TaskTimeMode.DURATION,
+    val durationMinutes: Int? = null,
+    val endAt: LocalDateTime? = null,
 )
+
+fun Task.resolvedEndAt(): LocalDateTime? =
+    when (timeMode) {
+        TaskTimeMode.DURATION ->
+            if (reminder != null && durationMinutes != null && durationMinutes > 0) {
+                reminder
+                    .toInstant(TimeZone.currentSystemDefault())
+                    .plus(durationMinutes, DateTimeUnit.MINUTE)
+                    .toLocalDateTime(TimeZone.currentSystemDefault())
+            } else {
+                null
+            }
+
+        TaskTimeMode.END_TIME ->
+            endAt?.takeIf { candidateEnd ->
+                reminder != null && candidateEnd > reminder
+            }
+    }
+
+fun Task.hasExplicitSpan(): Boolean = resolvedEndAt() != null
