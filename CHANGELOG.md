@@ -19,15 +19,15 @@
 
 Task timeline overview:
 
-![Task timeline overview](docs/images/personal-fork/tasks-timeline-overview.jpg)
+<img src="docs/images/personal-fork/tasks-timeline-overview.jpg" alt="Task timeline overview" width="220" />
 
 Task timeline with overlapping tasks:
 
-![Task timeline with overlapping tasks](docs/images/personal-fork/tasks-timeline-overlap.jpg)
+<img src="docs/images/personal-fork/tasks-timeline-overlap.jpg" alt="Task timeline with overlapping tasks" width="220" />
 
 Custom habit repeat interval:
 
-![Custom habit repeat interval](docs/images/personal-fork/habit-custom-repeat.jpg)
+<img src="docs/images/personal-fork/habit-custom-repeat.jpg" alt="Custom habit repeat interval" width="220" />
 
 ## 6.0.0
 - Added new Consistency Stat in Habit Analytics

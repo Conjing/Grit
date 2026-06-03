@@ -49,17 +49,18 @@ Current fork-specific changes include:
 
 ## Personal Fork Screenshots
 
-### Task timeline overview
+### Task timeline
 
-![Task timeline overview](docs/images/personal-fork/tasks-timeline-overview.jpg)
-
-### Task timeline with overlapping tasks
-
-![Task timeline with overlapping tasks](docs/images/personal-fork/tasks-timeline-overlap.jpg)
+<p>
+  <img src="docs/images/personal-fork/tasks-timeline-overview.jpg" alt="Task timeline overview" width="280" />
+  <img src="docs/images/personal-fork/tasks-timeline-overlap.jpg" alt="Task timeline with overlapping tasks" width="280" />
+</p>
 
 ### Custom habit repeat interval
 
-![Custom habit repeat interval](docs/images/personal-fork/habit-custom-repeat.jpg)
+<p>
+  <img src="docs/images/personal-fork/habit-custom-repeat.jpg" alt="Custom habit repeat interval" width="280" />
+</p>
 
 # Motivation 
 
