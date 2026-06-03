@@ -20,6 +20,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.shub39.grit.core.settings.domain.ReminderMode
 import com.shub39.grit.core.settings.domain.Sections
@@ -35,6 +37,7 @@ class SettingsDatastoreImpl(private val datastore: DataStore<Preferences>) : Set
     companion object {
         private val startOfWeekKey = stringPreferencesKey("start_of_week")
         private val startingSectionKey = stringPreferencesKey("starting_page")
+        private val lastTaskCategoryIdKey = longPreferencesKey("last_task_category_id")
         private val is24HrKey = booleanPreferencesKey("is_24Hr")
         private val notificationsKey = booleanPreferencesKey("notifications")
         private val reminderEnabledKey = booleanPreferencesKey("reminder_enabled")
@@ -43,8 +46,19 @@ class SettingsDatastoreImpl(private val datastore: DataStore<Preferences>) : Set
         private val alarmSoundLabelKey = stringPreferencesKey("alarm_sound_label")
         private val biometricLockKey = booleanPreferencesKey("biometric")
         private val taskReorderKey = booleanPreferencesKey("task_reorder")
+        private val taskTimelineZoomLevelKey = intPreferencesKey("task_timeline_zoom_level")
         private val compactHabitView = booleanPreferencesKey("compact_habit_view")
         private val lastChangelogShownKey = stringPreferencesKey("last_changelog_shown")
+    }
+
+    override fun getLastTaskCategoryId(): Flow<Long?> =
+        datastore.data.map { prefs -> prefs[lastTaskCategoryIdKey] }
+
+    override suspend fun setLastTaskCategoryId(categoryId: Long?) {
+        datastore.edit { prefs ->
+            if (categoryId == null) prefs.remove(lastTaskCategoryIdKey)
+            else prefs[lastTaskCategoryIdKey] = categoryId
+        }
     }
 
     override fun getStartOfTheWeekPref(): Flow<DayOfWeek> =
@@ -127,6 +141,13 @@ class SettingsDatastoreImpl(private val datastore: DataStore<Preferences>) : Set
 
     override suspend fun setTaskReorderPref(pref: Boolean) {
         datastore.edit { prefs -> prefs[taskReorderKey] = pref }
+    }
+
+    override fun getTaskTimelineZoomLevel(): Flow<Int> =
+        datastore.data.map { prefs -> prefs[taskTimelineZoomLevelKey] ?: 0 }
+
+    override suspend fun setTaskTimelineZoomLevel(level: Int) {
+        datastore.edit { prefs -> prefs[taskTimelineZoomLevelKey] = level }
     }
 
     override fun getCompactViewPref(): Flow<Boolean> =

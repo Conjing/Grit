@@ -23,7 +23,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceComposable
@@ -56,8 +55,8 @@ import androidx.glance.preview.ExperimentalGlancePreviewApi
 import androidx.glance.preview.Preview
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
+import androidx.glance.text.TextDecoration
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.shub39.grit.R
 import com.shub39.grit.app.MainActivity
 import com.shub39.grit.core.now
@@ -274,8 +273,13 @@ private fun TaskRow(
     onUpdateTaskStatus: (Task) -> Unit,
 ) {
     val status = task.status
-    val titleColor = if (status) completedTaskForeground() else taskForeground()
-    val timeColor = if (status) completedTaskForeground() else taskTimeForeground()
+    val titleColor =
+        if (status) {
+            GlanceTheme.colors.onSurfaceVariant
+        } else {
+            GlanceTheme.colors.onSurface
+        }
+    val timeColor = GlanceTheme.colors.onSurfaceVariant
 
     Row(
         modifier =
@@ -287,9 +291,16 @@ private fun TaskRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
-            provider = ImageProvider(if (status) R.drawable.task_checked_circle else R.drawable.circle_border),
+            provider = ImageProvider(if (status) R.drawable.check_circle else R.drawable.circle_border),
             contentDescription = null,
-            colorFilter = if (status) null else ColorFilter.tint(taskCircleForeground()),
+            colorFilter =
+                ColorFilter.tint(
+                    if (status) {
+                        GlanceTheme.colors.onTertiaryContainer
+                    } else {
+                        GlanceTheme.colors.onSurfaceVariant
+                    }
+                ),
         )
 
         Spacer(GlanceModifier.width(10.dp))
@@ -301,6 +312,12 @@ private fun TaskRow(
                 TextStyle(
                     color = titleColor,
                     fontWeight = FontWeight.Bold,
+                    textDecoration =
+                        if (status) {
+                            TextDecoration.LineThrough
+                        } else {
+                            TextDecoration.None
+                        },
                 ),
             maxLines = 2,
         )
@@ -359,14 +376,6 @@ private fun formatTaskTime(task: Task): String {
 
 private fun formatTime(time: LocalTime): String =
     "${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}"
-
-private fun taskForeground(): ColorProvider = ColorProvider(Color(0xFFF1FAFA))
-
-private fun taskTimeForeground(): ColorProvider = ColorProvider(Color(0xFFD3E0E2))
-
-private fun taskCircleForeground(): ColorProvider = ColorProvider(Color(0xFFC9DADC))
-
-private fun completedTaskForeground(): ColorProvider = ColorProvider(Color(0xFF99A7AA))
 
 @OptIn(ExperimentalGlancePreviewApi::class)
 @Preview(heightDp = 200, widthDp = 300)

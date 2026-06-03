@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -84,12 +85,17 @@ class TasksViewModel(
 
                 is TaskAction.ChangeCategory -> {
                     _state.update { it.copy(currentCategory = action.category) }
+                    datastore.setLastTaskCategoryId(action.category.id)
+                }
+
+                is TaskAction.ChangeTimelineZoomLevel -> {
+                    val clampedIndex = action.index.coerceIn(0, 3)
+                    _state.update { it.copy(timelineZoomLevelIndex = clampedIndex) }
+                    datastore.setTaskTimelineZoomLevel(clampedIndex)
                 }
 
                 is TaskAction.AddCategory -> {
                     upsertCategory(action.category)
-
-                    _state.update { it.copy(currentCategory = it.tasks.keys.firstOrNull()) }
                 }
 
                 is TaskAction.ReorderTasks -> {
@@ -105,7 +111,9 @@ class TasksViewModel(
 
                     delay(REORDER_DELAY)
 
-                    _state.update { it.copy(currentCategory = it.tasks.keys.firstOrNull()) }
+                    val nextCategory = _state.value.tasks.keys.firstOrNull()
+                    _state.update { it.copy(currentCategory = nextCategory) }
+                    datastore.setLastTaskCategoryId(nextCategory?.id)
                 }
 
                 is TaskAction.DeleteCategory -> {
@@ -113,7 +121,9 @@ class TasksViewModel(
 
                     delay(REORDER_DELAY)
 
-                    _state.update { it.copy(currentCategory = it.tasks.keys.firstOrNull()) }
+                    val nextCategory = _state.value.tasks.keys.firstOrNull()
+                    _state.update { it.copy(currentCategory = nextCategory) }
+                    datastore.setLastTaskCategoryId(nextCategory?.id)
                 }
 
                 is TaskAction.DeleteTask -> {
@@ -134,6 +144,20 @@ class TasksViewModel(
                         _state.update { it.copy(is24Hour = is24Hr, reorderTasks = reorderTasks) }
                     }
                     .launchIn(this)
+
+                combine(
+                        datastore.getLastTaskCategoryId().distinctUntilChanged(),
+                        datastore.getTaskTimelineZoomLevel().distinctUntilChanged(),
+                    ) { savedCategoryId, zoomLevelIndex ->
+                        _state.update {
+                            it.copy(
+                                savedCategoryId = savedCategoryId,
+                                timelineZoomLevelIndex = zoomLevelIndex.coerceIn(0, 3),
+                                taskUiPrefsLoaded = true,
+                            )
+                        }
+                    }
+                    .launchIn(this)
             }
     }
 
@@ -143,10 +167,18 @@ class TasksViewModel(
             viewModelScope.launch {
                 combine(repo.getTasksFlow(), repo.getCompletedTasksFlow()) { tasks, completedTasks
                         ->
-                        _state.update { it.copy(tasks = tasks, completedTasks = completedTasks) }
+                        val currentState = _state.value
+                        val resolvedCategory =
+                            tasks.keys.firstOrNull { it.id == currentState.savedCategoryId }
+                                ?: currentState.currentCategory?.takeIf { it in tasks.keys }
+                                ?: tasks.keys.firstOrNull()
 
-                        if (_state.value.currentCategory == null) {
-                            _state.update { it.copy(currentCategory = tasks.keys.firstOrNull()) }
+                        _state.update {
+                            it.copy(
+                                tasks = tasks,
+                                completedTasks = completedTasks,
+                                currentCategory = resolvedCategory,
+                            )
                         }
 
                         if (tasks.isEmpty()) addDefault()

@@ -22,6 +22,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.DayOfWeek
 
 interface SettingsDatastore {
+    fun getLastTaskCategoryId(): Flow<Long?>
+
+    suspend fun setLastTaskCategoryId(categoryId: Long?)
+
     fun getStartOfTheWeekPref(): Flow<DayOfWeek>
 
     suspend fun setStartOfWeek(day: DayOfWeek)
@@ -57,6 +61,10 @@ interface SettingsDatastore {
     fun getTaskReorderPref(): Flow<Boolean>
 
     suspend fun setTaskReorderPref(pref: Boolean)
+
+    fun getTaskTimelineZoomLevel(): Flow<Int>
+
+    suspend fun setTaskTimelineZoomLevel(level: Int)
 
     fun getCompactViewPref(): Flow<Boolean>
 

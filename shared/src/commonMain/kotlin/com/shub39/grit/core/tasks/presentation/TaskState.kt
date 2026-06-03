@@ -29,4 +29,7 @@ data class TaskState(
     val completedTasks: List<Task> = emptyList(),
     val is24Hour: Boolean = false,
     val reorderTasks: Boolean = true,
+    val timelineZoomLevelIndex: Int = 0,
+    val savedCategoryId: Long? = null,
+    val taskUiPrefsLoaded: Boolean = false,
 )

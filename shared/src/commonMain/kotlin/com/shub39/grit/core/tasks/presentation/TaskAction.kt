@@ -24,6 +24,8 @@ sealed interface TaskAction {
 
     data class ChangeCategory(val category: Category) : TaskAction
 
+    data class ChangeTimelineZoomLevel(val index: Int) : TaskAction
+
     data class DeleteCategory(val category: Category) : TaskAction
 
     data object DeleteTasks : TaskAction
