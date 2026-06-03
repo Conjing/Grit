@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased (Personal Fork, not upstream)
+- Added custom repeat interval support for habits
+- Split reminder behavior into silent reminder, popup reminder, and alarm reminder
+- Reworked the task page into a timeline view
+- Added 1h / 30m / 15m / 10m timeline zoom levels
+- Moved timeline zoom controls to the date bar and persisted zoom level between launches
+- Persisted the selected task category between launches
+- Refined current-time centering when reopening the app and when switching between days
+- Updated task block overlap width calculation to use actual time overlap
+- Reduced timeline label width and improved large-font support for the date bar, tick labels, and task blocks
+- Added marquee scrolling for truncated task titles in the timeline
+- Added compact fallback formatting for task start/end times when horizontal space is limited
+- Reworked task block text layout so the time row can use the full width under the duration label
+- Added and refined the todo task widget display logic
+
 ## 6.0.0
 - Added new Consistency Stat in Habit Analytics
 - Redesigned Weekly Comparison Stat, Displays weekly comparison up to 1 year

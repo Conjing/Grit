@@ -31,6 +31,22 @@
 
 Check out planned changes in [RoadMap](https://github.com/shub39/Grit/discussions/66)
 
+# Personal Fork Notes
+
+This repository is maintained as a personal fork based on [shub39/Grit](https://github.com/shub39/Grit).
+It keeps the original project as the foundation while adding workflow tweaks for my own daily use.
+Changes listed below are specific to this fork and are not official upstream release notes.
+
+Current fork-specific changes include:
+
+- Custom repeat interval support for habits
+- Split reminder behavior into silent reminder, popup reminder, and alarm reminder
+- Reworked task page into a timeline view
+- Timeline zoom levels with persistent zoom and category state
+- Refined current-time centering and day switching behavior in the timeline
+- Improved large-font support for timeline labels, date header, and task blocks
+- Todo task widget support with ongoing display logic refinements
+
 # Motivation 
 
 There are plenty of todo list and habit tracker apps for android. Some have the features I love while some have good UI design.
