@@ -47,6 +47,20 @@ Current fork-specific changes include:
 - Improved large-font support for timeline labels, date header, and task blocks
 - Todo task widget support with ongoing display logic refinements
 
+## Personal Fork Screenshots
+
+### Task timeline overview
+
+![Task timeline overview](docs/images/personal-fork/tasks-timeline-overview.jpg)
+
+### Task timeline with overlapping tasks
+
+![Task timeline with overlapping tasks](docs/images/personal-fork/tasks-timeline-overlap.jpg)
+
+### Custom habit repeat interval
+
+![Custom habit repeat interval](docs/images/personal-fork/habit-custom-repeat.jpg)
+
 # Motivation 
 
 There are plenty of todo list and habit tracker apps for android. Some have the features I love while some have good UI design.

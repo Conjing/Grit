@@ -15,6 +15,20 @@
 - Reworked task block text layout so the time row can use the full width under the duration label
 - Added and refined the todo task widget display logic
 
+### Reference screenshots
+
+Task timeline overview:
+
+![Task timeline overview](docs/images/personal-fork/tasks-timeline-overview.jpg)
+
+Task timeline with overlapping tasks:
+
+![Task timeline with overlapping tasks](docs/images/personal-fork/tasks-timeline-overlap.jpg)
+
+Custom habit repeat interval:
+
+![Custom habit repeat interval](docs/images/personal-fork/habit-custom-repeat.jpg)
+
 ## 6.0.0
 - Added new Consistency Stat in Habit Analytics
 - Redesigned Weekly Comparison Stat, Displays weekly comparison up to 1 year
